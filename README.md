@@ -1,2 +1,2 @@
 # Collabsphere
-A Project Collaboration Application
+A Project Collaboration Application.
