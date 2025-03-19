@@ -121,6 +121,7 @@ def first_logins(data):
                return jsonify({"error": str(e)}), 500
 
 def profile_views(data):
+    #user profile view
     with engine.connect() as conn:
         try:
           result=conn.execute(text("""select * from "User" where roll_no=:val1"""),{
@@ -151,10 +152,47 @@ def profile_views(data):
 
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+
+def update_profile_sql(data):
+   with engine.connect() as conn:
+        try:
+            query = text("""
+        UPDATE "User"
+        SET 
+            
+            past_experience = :past_experience,
+            tech_stack = :tech_stack,
+            github_profile = :github_profile,
+            linkedin_profile = :linkedin_profile,
+            role_type = :role_type,
+            rating = :rating,
+            email_update = :email_update,
+            project_update = :project_update
+        WHERE roll_no = :roll_no
+    """)
+
+            conn.execute(query, {
+        
+        "past_experience": data["past_experience"],
+        "tech_stack": data["tech_stack"],
+        "github_profile": data["github_profile"],
+        "linkedin_profile": data["linkedin_profile"],
+        "role_type": data["role_type"],
+        "rating": data["rating"],
+        "email_update": data["email_update"],
+        "project_update": data["project_update"],
+        "roll_no": data["roll_no"]
+    })
+
+            conn.commit()
+            return jsonify({"profile":"updated"})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 def list_of_mentors_sql():
+   #list of mentors  # addxtaus of reject applied pending
    with engine.connect() as conn:
       try:
-        # return   in it the alumini professr to whom he applied
+        # return   in it the alumini professr to whom he applied status
          result=conn.execute(text("""SELECT * FROM "User" WHERE role_type IN ('alumni', 'professor')
          """))
          conn.commit()
@@ -178,6 +216,7 @@ def list_of_mentors_sql():
           return jsonify({"error": str(e)}), 500
 
 def apply_mentors_sql(data):
+   #apply for mentor
    with engine.connect() as conn:
       try:
           result=conn.execute(text("""INSERT INTO "MentorRequest" (project_id, admin_id, mentor_id, status, requested_at, remarks)  
@@ -195,9 +234,24 @@ VALUES (:val1, :val2, :val3, :val4, :val5, :val6);
       except Exception as e:
       
        return jsonify({"error": str(e)}), 500
+
+def apply_mentors_takeback_sql(data):
+    with engine.connect() as conn:
+        try:
+            result=conn.execute(text("""DELETE FROM "MentorRequest" WHERE mentor_id = :val1 AND project_id = :val2;"""),{
+              "val1":data["mentor_id"],
+              "val2":data["project_id"]
+    
+            })
+            conn.commit()
+            return jsonify({"request":"taken"})
+        except Exception as e:
+             return jsonify({"error": str(e)}), 500
       
 
 def apply_project_sql(data):
+   
+   #apply for role in project
    with engine.connect() as conn:
       try:
          result=conn.execute(text("""Insert into "projectapplication" (user_id,project_id,role,remarks)
@@ -216,10 +270,29 @@ def apply_project_sql(data):
          return jsonify({"project":"applied"})
       except Exception as e:
             return jsonify({"error": str(e)}), 500
+      
+      
+def apply_project_status_takeback_sql(data):
+   
+   with engine.connect() as conn:
+      try:
+         result=conn.execute(text("""DELETE FROM "projectapplication" WHERE user_id = :val1 AND project_id = :val2;"""),{
+           "val1":data["user_id"],
+           "val2":data["project_id"]
+
+         })
+         print(data["user_id"],data["project_id"])
+         conn.commit()
+         return jsonify({"request":"taken"})
+      except Exception as e:
+          return jsonify({"error": str(e)}), 500
+         
+
 
 def apply_project_status_sql(data):
    with engine.connect() as conn:
       try:
+          #for single project and a user application status
          result=conn.execute(text("""select * from "projectapplication" where user_id=:val1 and project_id=:val2"""),{
        "val1":data['user_id'],
        "val2":data['project_id']
@@ -247,7 +320,10 @@ def apply_project_status_sql(data):
             return jsonify({"error": str(e)}), 500
       
 
+      
+
 def list_apply_project_sql(data):
+   # for single project how many people applied
    with engine.connect() as conn:
         try:
           result=conn.execute(text("""select * from "projectapplication" where project_id=:val1"""),{
@@ -271,7 +347,9 @@ def list_apply_project_sql(data):
 
         except Exception as e:
             return jsonify({"error": str(e)}), 500
-def list_update_project_status_sql(data):
+def update_project_status_sql(data):
+
+    # update /apply/takeback project applied
     with engine.connect() as conn:
       try:
          result = conn.execute(text("""

@@ -5,7 +5,7 @@ from flask_cors import CORS  # Import CORS
 import time
 from smtp import send_email
 from sql import add_projects,ranking,first_logins,profile_views,list_of_mentors_sql,apply_mentors_sql,apply_project_sql
-from sql import apply_project_status_sql,list_apply_project_sql,list_update_project_status_sql
+from sql import apply_project_status_sql,list_apply_project_sql,update_project_status_sql,apply_project_status_takeback_sql,update_profile_sql
 # Initialize Firebase Admin
 cred = credentials.Certificate("key.json")
 firebase_admin.initialize_app(cred)
@@ -130,6 +130,11 @@ def profile_view():
 
         return profile_views(data)
 
+@app.route('/update/profile',methods=['POST'])
+def update_profile():
+    data=request.json
+    return update_profile_sql(data)
+
 
 @app.route('/list/mentors',methods=['POST'])
 def list_of_mentors():
@@ -141,11 +146,11 @@ def apply_mentors():
      
      data=request.json
      return apply_mentors_sql(data)
-@app.route('/accept/mentors',methods=['POST'])
+"""@app.route('/accept/mentors',methods=['POST'])
 def accept_mentor():
      data=request.json
      #required mentor_id(user_id),project_id
-     return accept_mentor_sql(data)
+     return accept_mentor_sql(data)"""
 
 @app.route('/apply/project',methods=['POST'])
 def apply_project():
@@ -155,20 +160,22 @@ def apply_project():
 @app.route('/apply/project/status',methods=['POST'])
 def apply_project_status():
   data=request.json
-
+  return apply_project_status_sql(data)
 
 @app.route('/apply/project/status/takeback',methods=['POST'])
- # return apply_project_status_takeback_sql(data)
+def apply_project_status_takeback():
+    data=request.json
+    return apply_project_status_takeback_sql(data)
 
 @app.route('/list/apply/status',methods=['POST'])
 def list_apply_project_():
     data=request.json
     return list_apply_project_sql(data)
 
-@app.route('/list/update/project/status',methods=['POST'])
+@app.route('/update/project/status',methods=['POST'])
 def list_update_project_status():
     data=request.json
-    return list_update_project_status_sql(data)
+    return update_project_status_sql(data)
 
 
      
@@ -196,10 +203,3 @@ if __name__ == "__main__":
      
 
 
-
-if __name__ == "__main__":
-    app.run(debug=True)
-
-
-
-#email notification of things
