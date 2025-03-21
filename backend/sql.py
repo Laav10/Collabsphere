@@ -1,25 +1,48 @@
 from sqlalchemy import create_engine,text
 import psycopg2
 from flask import Flask, request, jsonify
+import binascii
 
 
 engine = create_engine('postgresql+psycopg2://postgres:Karn1234@localhost:5432/postgres', echo=True)
 
+from Crypto.Cipher import AES
+import os
+import base64
 
+def encrypt_message(message, secret_key):
+    cipher = AES.new(secret_key, AES.MODE_GCM)  # Use AES-GCM mode
+    nonce = cipher.nonce  # Generate a unique nonce for each encryption
+    ciphertext, tag = cipher.encrypt_and_digest(message.encode())  # Encrypt + Authentication Tag
+
+    return base64.b64encode(nonce + tag + ciphertext).decode()
+
+def decrypt_message(encrypted_message, secret_key):
+    data = base64.b64decode(encrypted_message)
+    nonce, tag, ciphertext = data[:16], data[16:32], data[32:]
+
+    cipher = AES.new(secret_key, AES.MODE_GCM, nonce=nonce)
+    return cipher.decrypt_and_verify(ciphertext, tag).decode()
 def  insert_message(message):
  with engine.connect() as conn:
-    
+     aes_key = binascii.unhexlify("f3a1c4e72d7b6a8fcb4d9912e5a8c37e4b9f02c6d78e5f1a9c3bdf8a45e7d203")
+
      print(message)
+     encrypted_msg = encrypt_message(message['message'], aes_key)
      conn.execute(text("""
     INSERT INTO messages (username, usergroup, message,type,file_name) 
     VALUES 
     (:val1, :val2, :val3,:val4,:val5)"""),
    { "val1":message['username'],
     "val2":"general",
-    "val3":message['message'],
+    "val3":encrypted_msg,
     "val4":message['type'],
     "val5":message['fileName']})
      conn.commit()
+
+     decrypt_message(encrypted_msg, aes_key)
+     print(decrypt_message(encrypted_msg, aes_key), "decrypted")
+
 
 
 def  fetch_message(message):
@@ -188,17 +211,41 @@ def update_profile_sql(data):
             return jsonify({"profile":"updated"})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
-def list_of_mentors_sql():
+
+def list_of_mentors_sql(data):
    #list of mentors  # addxtaus of reject applied pending
-   with engine.connect() as conn:
+   ##first check whether project  has mentor or not.
+   result0=conn.execute(text("""select * from "projectmembers" where project_id=:val1 and role=:val2"""),{
+      
+
+
+        "val1":data['project_id'],
+        "val2":"mentor"
+   })
+   if result0.rowcount>0:
+        return jsonify({"mentor":"already exist"})
+   else:
+     project_id=data['project_id']
+     with engine.connect() as conn:
       try:
         # return   in it the alumini professr to whom he applied status
-         result=conn.execute(text("""SELECT * FROM "User" WHERE role_type IN ('alumni', 'professor')
-         """))
+         query = text("""
+    SELECT 
+        u.*, 
+        COALESCE(m.status, 'Apply') AS status  
+    FROM "User" u
+    LEFT JOIN mentorrequest m 
+        ON u.roll_no = m.mentor_id 
+        AND m.status = 'Pending'
+        AND m.project_id = :project_id  -- Filter for a specific project
+    WHERE u.role_type IN ('professor', 'alumni');
+""")
+
+         result = conn.execute(query, {"project_id": project_id})
          conn.commit()
          rows=result.fetchall()
          data = [
-    {
+    {   
         "roll_no": row[0],  
         "email": row[1],  
         "past_experience": row[2],  
@@ -207,6 +254,8 @@ def list_of_mentors_sql():
         "linkedin_profile": row[5],  
         "role_type": row[6],  
         "rating": row[7]  ,
+        "name":row[8],
+        "status": row[9]
       
     }
         for row in rows
