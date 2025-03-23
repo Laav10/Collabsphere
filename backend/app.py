@@ -3,6 +3,7 @@ from firebase_admin import credentials, auth,firestore
 from flask import Flask, request, jsonify,make_response
 from flask_cors import CORS  # Import CORS
 import time
+from data_valid import UserSchema,add_project_schema,first_login_schema,list_of_mentors_schema,apply_mentors_schema
 from datetime import datetime
 
 from smtp import send_email
@@ -170,58 +171,77 @@ def auto_login():
          return jsonify({"authenticated": False, "message": "Invalid session"}), 401
 @app.route('/logout',methods=['GET'])
 def logout():
+ try:
     response = make_response(jsonify({"success": True, "message": "Logged out"}))
     response.delete_cookie("uid")
     response.delete_cookie("fingerprint")
     return jsonify({"deleted":True}), 200
+ except Exception as e:
+    return jsonify({"deleted":False}), 500
 
 @app.route('/add/project',methods=['POST'])
 def add_project():
 
-    data = request.json
-    admin_id = data.get('admin_id')
-    title = data.get('title')
-    description = data.get('description')
-    start_date = data.get('start_date')
-    end_date = data.get('end_date')
-    members_required = data.get('members_required')
-    status = data.get('status')
-    tags = data.get('tags')
 
-    return add_projects(data)
+    data = request.json
+    errors=add_project_schema().validate(data)
+    if errors:
+        return jsonify({"errordd": errors}), 400
+    else:
+       return add_projects(data)
+    
 @app.route('/best_projects',methods=['GET'])
 def best_projects():
+      
       return ranking()
 
 @app.route('/first_login',methods=['POST'])
 def first_login():
       
       data=request.json
-      
-      
-      return first_logins(data)
+      errors=first_login_schema().validate(data)
+      if errors:
+        return jsonify({"errors": errors}), 400
+      else:
+          return first_logins(data)
 @app.route('/profile/view',methods=['POST'])
 def profile_view():
         data=request.json
-
-        return profile_views(data)
+        errors=first_login_schema().validate(data)
+        if errors:
+         return jsonify({"errors": errors}), 400
+        else:
+          return profile_views(data)
 
 @app.route('/update/profile',methods=['POST'])
 def update_profile():
     data=request.json
-    return update_profile_sql(data)
+    schema = UserSchema()
+    errors = schema.validate(data)
+    if errors:
+        return jsonify({"errordd": errors}), 400
+    else:
+     return update_profile_sql(data)
 
 
 @app.route('/list/mentors',methods=['POST'])
 def list_of_mentors():
      data=request.json
-     return list_of_mentors_sql()
+     errors=list_of_mentors_schema().validate(data)
+     if errors:
+      return jsonify({"errors": errors}), 400
+     else:
+      return list_of_mentors_sql(data)
 
 @app.route('/apply/mentors',methods=['POST'])
 def apply_mentors():
      
      data=request.json
-     return apply_mentors_sql(data)
+     errors=apply_mentors_schema().validate(data)
+     if errors:
+       return jsonify({"errors": errors}), 400
+     else:
+       return apply_mentors_sql(data)
 @app.route('/apply/mentors/status/takeback',methods=['POST'])
 def apply_mentors_status_takeback():
     data=request.json
