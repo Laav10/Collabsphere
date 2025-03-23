@@ -3,7 +3,8 @@ from firebase_admin import credentials, auth,firestore
 from flask import Flask, request, jsonify,make_response
 from flask_cors import CORS  # Import CORS
 import time
-from data_valid import UserSchema,add_project_schema,first_login_schema,list_of_mentors_schema,apply_mentors_schema
+from data_valid import UserSchema,add_project_schema,first_login_schema,list_of_mentors_schema,apply_mentors_schema,apply_mentors_status_takeback_schema
+from data_valid import accept_mentor_schema,apply_project_schema
 from datetime import datetime
 
 from smtp import send_email
@@ -245,18 +246,29 @@ def apply_mentors():
 @app.route('/apply/mentors/status/takeback',methods=['POST'])
 def apply_mentors_status_takeback():
     data=request.json
-    return apply_mentors_takeback_sql(data)
+    errors=apply_mentors_status_takeback_schema().validate(data)
+    if errors:
+       return jsonify({"errors": errors}), 400
+    else:
+      return apply_mentors_takeback_sql(data)
 @app.route('/accept/mentors',methods=['POST'])
 def accept_mentor():
      data=request.json
-     #required mentor_id(user_id),project_id
-     return accept_mentor_sql(data)
+     errors=accept_mentor_schema().validate(data)
+     if errors:
+       return jsonify({"errors": errors}), 400
+     else:
+         #required mentor_id(user_id),project_id
+       return accept_mentor_sql(data)
 
 @app.route('/apply/project',methods=['POST'])
 def apply_project():
       data=request.json
-      
-      return apply_project_sql(data)
+      errors=apply_project_schema().validate(data)
+      if errors:
+        return jsonify({"errors": errors}), 400
+      else:
+        return apply_project_sql(data)
 @app.route('/apply/project/status',methods=['POST'])
 def apply_project_status():
   data=request.json

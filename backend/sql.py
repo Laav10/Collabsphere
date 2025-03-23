@@ -268,6 +268,7 @@ def apply_mentors_sql(data):
    #apply for mentor
    with engine.connect() as conn:
       try:
+          #check forreuested at
           result=conn.execute(text("""INSERT INTO "MentorRequest" (project_id, admin_id, mentor_id, status, requested_at, remarks)  
 VALUES (:val1, :val2, :val3, :val4, :val5, :val6);
  """),{
@@ -397,7 +398,7 @@ def list_apply_project_sql(data):
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 def update_project_status_sql(data):
-
+# ak update status by admin and add in project members table
     # update /apply/takeback project applied
     with engine.connect() as conn:
       try:

@@ -42,7 +42,7 @@ class list_of_mentors_schema(Schema):
     class Meta:
         unknown = EXCLUDE
 
-class mentor_request_schema(Schema):
+class apply_mentors_schema(Schema):
     project_id = fields.Int(required=True)
     admin_id = fields.Int(required=True)
     mentor_id = fields.Int(required=True)
@@ -52,6 +52,54 @@ class mentor_request_schema(Schema):
 
     class Meta:
         unknown = EXCLUDE  # Ignore unknown fields
+
+class apply_mentors_status_takeback_schema(Schema):
+    project_id=fields.Int(required=True)
+    mentor_id=fields.Int(required=True)
+
+    class Meta:
+        unknown = EXCLUDE
+
+class apply_mentors_status_takeback_schema(Schema):
+    project_id=fields.Int(required=True)
+    mentor_id=fields.Int(required=True)
+
+    class Meta:
+        unknown = EXCLUDE
+
+class accept_mentor_schema(Schema):
+    project_id=fields.Int(required=True)
+    mentor_id=fields.Int(required=True)
+    status=fields.Str(validate=validate.OneOf(["accepted","rejected"]),required=True)
+
+class apply_project_schema(Schema):
+    project_id=fields.Int(required=True)
+    user_id=fields.Int(required=True)
+    role=fields.Str(required=True)
+    remarks = fields.Str(allow_none=True)
+    class Meta:
+        unknown = EXCLUDE
+
+class apply_project_status_schema(Schema):
+    user_id=fields.Int(required=True)
+    project_id=fields.Int(required=True)
+
+    class Meta:
+        unknown = EXCLUDE
+
+
+class list_apply_project_schema(Schema):
+    application_id = fields.Int(required=True)
+    user_id = fields.Int(required=True)
+    project_id = fields.Int(required=True)
+    role = fields.Str(required=True)
+    status = fields.Str(required=True)
+    remarks = fields.Str(allow_none=True)  # Optional field, can be null
+
+
+
+
+
 
 
     
