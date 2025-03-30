@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import Footer from "@/components/Footerpage"
 import FeaturesSection from "@/components/features"
+import GoogleLogin from "@/components/GoogleLogin"
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -80,12 +81,7 @@ export default function Home() {
             <p className="text-xl text-gray-400">
               CollabSphere enables students to connect, collaborate, and build impactful projects together.
             </p>
-            <Button
-              onClick={() => router.push("/login")}
-              className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white px-8 py-2 rounded-md"
-            >
-              Explore
-            </Button>
+      <GoogleLogin />
           </div>
         </div>
 
