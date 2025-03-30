@@ -1,10 +1,14 @@
 "use client"
 
 import { useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import Footer from "@/components/Footerpage"
+import FeaturesSection from "@/components/features"
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const router = useRouter() // Use useRouter hook
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -76,21 +80,19 @@ export default function Home() {
             <p className="text-xl text-gray-400">
               CollabSphere enables students to connect, collaborate, and build impactful projects together.
             </p>
-            <Button className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white px-8 py-2 rounded-md">
+            <Button
+              onClick={() => router.push("/login")}
+              className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white px-8 py-2 rounded-md"
+            >
               Explore
             </Button>
           </div>
         </div>
 
         <div className="mt-24">
-          <div className="flex items-center gap-4 mb-12">
-            <h2 className="text-4xl font-bold">Our Features</h2>
-            <span className="px-2 py-1 bg-gray-800 rounded-full text-sm">678 × 678</span>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">{/* Feature cards would go here */}</div>
+          <FeaturesSection />
         </div>
       </div>
     </main>
   )
 }
-

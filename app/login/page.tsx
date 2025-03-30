@@ -6,6 +6,7 @@ import { useState } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import Link from "next/link"
 
 export default function LoginPage() {
   const [username, setUsername] = useState("")
@@ -68,6 +69,7 @@ export default function LoginPage() {
                   Login to Account
                 </Button>
               </div>
+              
               <div className="flex items-center justify-center w-full">
                 <Image
                   src="/images/stu.png"
@@ -79,6 +81,7 @@ export default function LoginPage() {
               </div>
             </div>
           </form>
+        
         </div>
       </div>
     </div>
