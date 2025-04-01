@@ -68,6 +68,7 @@ const GoogleLogin = () => {
       const email = user.email;
 
       if (email?.endsWith("iiitkottayam.ac.in")) {
+          
         console.log("User allowed", user);
       } else {
         console.error("Unauthorized domain");

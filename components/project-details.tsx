@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Clock, Users, Briefcase, Code, Flag } from "lucide-react"
+import { Calendar, Clock, Users, Briefcase, Code, Flag, Github } from "lucide-react"
 import type { Project } from "@/lib/types"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
@@ -9,7 +9,7 @@ interface ProjectDetailsProps {
 }
 
 export default function ProjectDetails({ project }: ProjectDetailsProps) {
-  const { name, description, type, techStack, startDate, endDate, progress, teamMembers, milestones, membersRequired } =
+  const { name, description, type, techStack, startDate, endDate, progress, teamMembers,  membersRequired , githublink } =
     project
 
   return (
@@ -55,6 +55,14 @@ export default function ProjectDetails({ project }: ProjectDetailsProps) {
                     <p className="font-medium">{new Date(endDate).toLocaleDateString()}</p>
                   </div>
                 </div>
+
+                <div className="flex items-start">
+                  <Github className="h-5 w-5 mr-2 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Github</p>
+                    <p className="font-medium">{githublink}</p>
+                  </div>
+                </div>  
               </div>
             </CardContent>
           </Card>
@@ -74,27 +82,7 @@ export default function ProjectDetails({ project }: ProjectDetailsProps) {
             </CardContent>
           </Card>
 
-          <Card className="bg-zinc-900 border-zinc-800">
-            <CardHeader>
-              <CardTitle>Milestones</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {milestones.map((milestone, index) => (
-                  <div key={index} className="flex items-start">
-                    <Flag className="h-5 w-5 mr-2 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="font-medium">{milestone}</p>
-                    </div>
-                  </div>
-                ))}
-
-                {milestones.length === 0 && (
-                  <p className="text-muted-foreground">No milestones have been set for this project.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+         
         </div>
 
         <div className="space-y-6">

@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ProjectCard from "@/components/project-card"
 import CreateProjectButton from "@/components/create-project-button"
 import { projectsData } from "@/lib/sample-data"
+import Navbar from "@/components/navbar"
 
 export default function MyProjects() {
   const [activeTab, setActiveTab] = useState("current")
@@ -14,7 +15,10 @@ export default function MyProjects() {
   const appliedProjects = projectsData.filter((project) => project.status === "applied")
 
   return (
-    <main className="min-h-screen bg-black text-white p-4 md:p-8">
+    <div className="flex flex-col md:flex-row">
+      <Navbar activeNav="projects" setActiveNav={() => {}} />
+    
+    <main className="min-h-screen bg-black w-full text-white p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <h1 className="text-3xl font-bold text-pink-500 mb-4 md:mb-0">My Projects</h1>
@@ -73,6 +77,9 @@ export default function MyProjects() {
         </Tabs>
       </div>
     </main>
+    </div>
+ 
+
   )
 }
 

@@ -9,21 +9,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-  LayoutDashboard,
-  Users,
-  BarChart3,
-  Settings,
-  FolderKanban,
   PlusCircle,
-  LogOut,
-  Lock,
-  Trophy,
+  
+    Trophy,
   Mail,
   Phone,
   MapPin,
   Github,
   Linkedin,
 } from "lucide-react"
+import Navbar from "@/components/navbar"
 
 // Sample user data
 const userData = {
@@ -67,54 +62,8 @@ export default function SettingsPage() {
   return (
     <div className="flex min-h-screen bg-black text-white">
       {/* Sidebar */}
-      <div className="w-64 bg-gray-900 p-4">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-pink-500">CollabSphere</h1>
-        </div>
 
-        <nav className="space-y-2">
-          <Link
-            href="/dashboard"
-            className="w-full flex items-center space-x-2 p-3 rounded-md text-gray-300 hover:bg-gray-800"
-          >
-            <LayoutDashboard className="h-5 w-5" />
-            <span>Dashboard</span>
-          </Link>
-
-          <button
-            className={`w-full flex items-center space-x-2 p-3 rounded-md ${activeNav === "projects" ? "bg-pink-500 text-white" : "text-gray-300 hover:bg-gray-800"}`}
-            onClick={() => setActiveNav("projects")}
-          >
-            <FolderKanban className="h-5 w-5" />
-            <span>Projects</span>
-          </button>
-
-          <button
-            className={`w-full flex items-center space-x-2 p-3 rounded-md ${activeNav === "team" ? "bg-pink-500 text-white" : "text-gray-300 hover:bg-gray-800"}`}
-            onClick={() => setActiveNav("team")}
-          >
-            <Users className="h-5 w-5" />
-            <span>Team</span>
-          </button>
-
-          <button
-            className={`w-full flex items-center space-x-2 p-3 rounded-md ${activeNav === "analytics" ? "bg-pink-500 text-white" : "text-gray-300 hover:bg-gray-800"}`}
-            onClick={() => setActiveNav("analytics")}
-          >
-            <BarChart3 className="h-5 w-5" />
-            <span>Analytics</span>
-          </button>
-
-          <button
-            className={`w-full flex items-center space-x-2 p-3 rounded-md ${activeNav === "settings" ? "bg-pink-500 text-white" : "text-gray-300 hover:bg-gray-800"}`}
-            onClick={() => setActiveNav("settings")}
-          >
-            <Settings className="h-5 w-5" />
-            <span>Settings</span>
-          </button>
-        </nav>
-      </div>
-
+       <Navbar setActiveNav={setActiveNav} activeNav={activeNav}/>
       {/* Main content */}
       <div className="flex-1 p-8">
         <div className="flex justify-between items-center mb-6">
@@ -333,41 +282,13 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gray-800 border-none">
-              <CardHeader>
-                <CardTitle className="text-pink-500">Security</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="current-password">Current Password</Label>
-                  <Input id="current-password" type="password" className="bg-gray-700 border-gray-600" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="new-password">New Password</Label>
-                  <Input id="new-password" type="password" className="bg-gray-700 border-gray-600" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm New Password</Label>
-                  <Input id="confirm-password" type="password" className="bg-gray-700 border-gray-600" />
-                </div>
-
-                <Button className="bg-pink-500 hover:bg-pink-600 w-full">
-                  <Lock className="mr-2 h-4 w-4" /> Change Password
-                </Button>
-
-                <div className="pt-4 border-t border-gray-700">
-                  <Button variant="destructive" className="w-full">
-                    <LogOut className="mr-2 h-4 w-4" /> Logout
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+           
           </TabsContent>
         </Tabs>
       </div>
     </div>
+                  
+              
   )
 }
 

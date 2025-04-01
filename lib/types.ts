@@ -10,6 +10,7 @@ export interface Project {
     teamMembers: string[]
     milestones: string[]
     membersRequired: string
+    githublink:string
     status: "active" | "completed" | "applied"
   }
   

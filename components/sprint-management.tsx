@@ -22,6 +22,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns"
 import { CalendarIcon, Plus, Clock, Users, CheckCircle2, Circle, ArrowRight } from "lucide-react"
 import { cn } from "@/lib/utils"
+import TeamMemberDropdown from "@/components/team-member-card"
+
 
 type Task = {
   id: string
@@ -39,7 +41,15 @@ type Sprint = {
   endDate: Date
   tasks: Task[]
 }
-
+const teamMembers = [
+  { id: "1", name: "Alice Johnson" },
+  { id: "2", name: "Bob Smith" },
+  { id: "3", name: "Charlie Brown" },
+  { id: "4", name: "Diana Prince" },
+  { id: "5", name: "Ethan Hunt" },
+  { id: "6", name: "Fiona Gallagher" },
+  { id: "7", name: "George Miller" },
+]
 export default function SprintManagement() {
   const [sprints, setSprints] = useState<Sprint[]>([
     {
@@ -304,6 +314,22 @@ export default function SprintManagement() {
               </CardContent>
             </Card>
           )}
+               <Card className="bg-zinc-900 border-zinc-800">
+              
+              <CardContent className="space-y-2">
+              
+ 
+    <div className="mb-6">
+      <TeamMemberDropdown
+        teamMembers={teamMembers}
+        onSelect={(member) => alert(`${member.name} is now the moderator!`)}
+        label="Assign Moderator"
+      />
+    </div>
+
+
+              </CardContent>
+            </Card>
         </div>
 
         <div className="md:col-span-3">
@@ -346,8 +372,14 @@ export default function SprintManagement() {
                           onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
                         />
                       </div>
+                   
+      <TeamMemberDropdown
+        teamMembers={teamMembers}
+        onSelect={(member) => alert(`${member.name} is now the moderator!`)}
+        label="Give task to team member"
+      />
 
-                      <div className="space-y-2">
+                      <div className="space-y-2 mt-2">
                         <div className="flex justify-between">
                           <label className="text-sm">Task Weightage (Story Points)</label>
                           <span className="text-sm font-medium">{newTask.weightage}</span>

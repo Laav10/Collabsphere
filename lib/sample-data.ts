@@ -14,6 +14,7 @@ export const projectsData: Project[] = [
     milestones: ["Project Setup", "Backend Development", "Frontend Development", "Testing", "Deployment"],
     membersRequired: "3-5",
     status: "active",
+    githublink:"github.com/username/repo",
   },
   {
     id: "project-2",
@@ -28,6 +29,7 @@ export const projectsData: Project[] = [
     milestones: ["Design", "Core Functionality", "User Authentication", "Testing", "App Store Submission"],
     membersRequired: "1-2",
     status: "completed",
+    githublink:"github.com/username/repo",
   },
   {
     id: "project-3",
@@ -42,6 +44,7 @@ export const projectsData: Project[] = [
     milestones: ["Data Collection", "ML Model Development", "Dashboard UI", "Integration", "Testing"],
     membersRequired: "3-5",
     status: "applied",
+    githublink:"github.com/username/repo",
   },
 ]
 

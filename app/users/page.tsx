@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import TeamMemberCard from "@/components/team-member-card"
 import { teamMembersData } from "@/lib/sample-data"
 import { Search } from 'lucide-react'
+import Navbar from "@/components/navbar"
 
 export default function TeamPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -42,6 +43,8 @@ export default function TeamPage() {
   }
   
   return (
+    <div className="flex flex-col md:flex-row  ">
+      <Navbar activeNav="users" setActiveNav={() => {}} />
     <main className="min-h-screen bg-black text-white p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-pink-500 mb-8">Team Members</h1>
@@ -106,5 +109,6 @@ export default function TeamPage() {
         </div>
       </div>
     </main>
+    </div>
   )
 }

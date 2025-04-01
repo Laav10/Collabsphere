@@ -42,5 +42,3 @@ const TeamMemberDropdown: React.FC<TeamMemberDropdownProps> = ({ teamMembers, on
     </div>
   )
 }
-
-export default TeamMemberDropdown

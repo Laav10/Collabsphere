@@ -6,7 +6,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ProjectDetails from "@/components/project-details"
 import SprintManagement from "@/components/sprint-management"
 import ProjectAnalytics from "@/components/project-analytics"
-import ProjectChat from "@/components/project-chat"
 import { projectsData } from "@/lib/sample-data"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
@@ -48,11 +47,11 @@ export default function ProjectPage() {
         </div>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-8">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 mb-8">
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="sprints">Sprints</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="chat">Chat</TabsTrigger>
+      
           </TabsList>
 
           <TabsContent value="details">
@@ -65,10 +64,6 @@ export default function ProjectPage() {
 
           <TabsContent value="analytics">
             <ProjectAnalytics projectId={project.id} />
-          </TabsContent>
-
-          <TabsContent value="chat">
-            <ProjectChat projectId={project.id} />
           </TabsContent>
         </Tabs>
       </div>

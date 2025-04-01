@@ -19,7 +19,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
   const timeRemaining = formatDistanceToNow(end, { addSuffix: true })
 
   return (
-    <Link href={`/projects/${id}`}>
+    <Link href={`/project/${id}`}>
       <Card className="bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-all h-full flex flex-col">
         <CardHeader className="pb-2">
           <div className="flex justify-between items-start">
