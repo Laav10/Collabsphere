@@ -17,13 +17,15 @@ class UserSchema(Schema):
 
 class add_project_schema(Schema):
     admin_id=fields.Int(required=True)
-    title=fields.Str(requuired=True)
+    title=fields.Str(required=True)
     description=fields.Str(required=True)
     start_date=fields.Date(required=True)
     end_date=fields.Date(required=True)
     members_required=fields.Int(required=True)
     status=fields.Str(validate=validate.OneOf(["Active","Completed"]),required=True)
-    tags=fields.List(fields.Str(),required=True)
+    #tags=fields.List(fields.Str(),required=True)
+    tags=fields.Str(required=True)
+
 
     class Meta:
         unknown = EXCLUDE
@@ -95,6 +97,13 @@ class list_apply_project_schema(Schema):
     role = fields.Str(required=True)
     status = fields.Str(required=True)
     remarks = fields.Str(allow_none=True)  # Optional field, can be null
+
+
+class list_projects_scheme(Schema):
+
+ user_id=fields.Int(required=True)
+ class Meta:
+        unknown = EXCLUDE
 
 
 

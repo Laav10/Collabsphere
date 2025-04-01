@@ -23,6 +23,19 @@ def decrypt_message(encrypted_message, secret_key):
 
     cipher = AES.new(secret_key, AES.MODE_GCM, nonce=nonce)
     return cipher.decrypt_and_verify(ciphertext, tag).decode()
+
+def user_insert_google_sql(data):
+
+    try:
+        # Connect to the database
+        with engine.connect() as conn:
+            query = text("""INSERT INTO "User" (roll_no, name,email) VALUES (:roll_no, :name,:email)""")
+            conn.execute(query, {"roll_no": 11, "name": data['user_name'],"email":data['email']})
+            conn.commit()  # Commit the transaction
+        return  jsonify({"user":"registered successfully"})
+    except Exception as e:
+        return f"Error: {str(e)}"
+
 def  insert_message(message):
  with engine.connect() as conn:
      aes_key = binascii.unhexlify("f3a1c4e72d7b6a8fcb4d9912e5a8c37e4b9f02c6d78e5f1a9c3bdf8a45e7d203")
@@ -95,6 +108,7 @@ def add_projects(data):
           
           })
         conn.commit()
+         
         return jsonify({"project":"added"})
 
 
@@ -187,8 +201,8 @@ def update_profile_sql(data):
             tech_stack = :tech_stack,
             github_profile = :github_profile,
             linkedin_profile = :linkedin_profile,
-            role_type = :role_type,
-            rating = :rating,
+           
+            
             email_update = :email_update,
             project_update = :project_update
         WHERE roll_no = :roll_no
@@ -200,8 +214,7 @@ def update_profile_sql(data):
         "tech_stack": data["tech_stack"],
         "github_profile": data["github_profile"],
         "linkedin_profile": data["linkedin_profile"],
-        "role_type": data["role_type"],
-        "rating": data["rating"],
+       
         "email_update": data["email_update"],
         "project_update": data["project_update"],
         "roll_no": data["roll_no"]
@@ -211,10 +224,61 @@ def update_profile_sql(data):
             return jsonify({"profile":"updated"})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+        
+
+
+def list_users_sql():
+   #for students only:
+   with engine.connect() as conn:
+        try:
+            query = text("""
+                SELECT 
+                    u.*, 
+                     
+                    COUNT(u.roll_no) AS project_count
+                FROM 
+                    "User" u
+                LEFT JOIN 
+                    "projectmembers" p ON u.roll_no = p.member_id
+                JOIN 
+                    "Project" pa ON p.project_id = pa.project_id
+                WHERE 
+                    pa.status = 'Completed'
+                GROUP BY 
+                    u.roll_no
+            """)
+
+            result = conn.execute(query)
+            rows = result.fetchall()
+
+            data = [
+                {
+                    "roll_no": row[0],
+                    "email": row[1],
+                    "past_experience": row[2],
+                    "tech_stack": row[3],
+                    "github_profile": row[4],
+                    "linkedin_profile": row[5],
+                    "role_type": row[6],
+                    "rating": row[7],
+                    "email_update": row[8],
+                    "project_update": row[9],
+                    "name":row[10],
+                    "project_count": row[11]   # Count of users per project
+                }
+                for row in rows
+            ]
+
+            return jsonify({"projects": data})
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
 def list_of_mentors_sql(data):
    #list of mentors  # addxtaus of reject applied pending
    ##first check whether project  has mentor or not.
+ with engine.connect() as conn:
+
    result0=conn.execute(text("""select * from "projectmembers" where project_id=:val1 and role=:val2"""),{
       
 
@@ -230,15 +294,18 @@ def list_of_mentors_sql(data):
       try:
         # return   in it the alumini professr to whom he applied status
          query = text("""
-    SELECT 
-        u.*, 
-        COALESCE(m.status, 'Apply') AS status  
-    FROM "User" u
-    LEFT JOIN mentorrequest m 
-        ON u.roll_no = m.mentor_id 
-        AND m.status = 'Pending'
-        AND m.project_id = :project_id  -- Filter for a specific project
-    WHERE u.role_type IN ('professor', 'alumni');
+   SELECT 
+    u.*, 
+    CASE 
+        WHEN m.status = 'Pending' THEN 'Pending' 
+        ELSE 'Apply' 
+    END AS status  
+FROM "User" u
+LEFT JOIN "mentorrequest" m 
+    ON u.roll_no = m.mentor_id 
+    AND m.project_id = :project_id  -- Filter for a specific project
+WHERE u.role_type IN ('professor', 'alumni');
+
 """)
 
          result = conn.execute(query, {"project_id": project_id})
@@ -254,8 +321,8 @@ def list_of_mentors_sql(data):
         "linkedin_profile": row[5],  
         "role_type": row[6],  
         "rating": row[7]  ,
-        "name":row[8],
-        "status": row[9]
+        "name":row[10],
+        "status": row[11     ]
       
     }
         for row in rows
@@ -336,6 +403,117 @@ def apply_project_status_takeback_sql(data):
          return jsonify({"request":"taken"})
       except Exception as e:
           return jsonify({"error": str(e)}), 500
+      
+
+def  admin_request_sql(data):
+     with engine.connect() as conn:
+      try:
+         result=conn.execute(text("""Insert into "projectjoin" (user_id,project_id,role,remarks)
+    VALUES(:val1,:val2,:val3,:val4);"""),{
+       "val1":data['to_user_id'],
+       "val2":data['project_id'],
+        "val3":data['role'],
+        "val4":data['remarks']
+
+
+
+
+
+         })
+         conn.commit()
+         return jsonify({"user":"requested"})
+      except Exception as e:
+            return jsonify({"error": str(e)}), 500
+      
+
+def admin_request_accept_sql(data):
+    data = request.json
+    query_check_exists = text("""
+        SELECT COUNT(*) FROM "projectjoin"
+        WHERE user_id = :user_id AND project_id = :project_id;
+    """)
+    query_update = text("""
+        UPDATE "projectjoin" 
+        SET status = :status
+        WHERE user_id = :user_id AND project_id = :project_id;
+    """)
+
+    query_insert_member = text("""
+        INSERT INTO "projectmembers" (project_id, member_id, role)
+        VALUES (:project_id, :member_id, :role)
+    """)
+
+    query_delete_others = text("""
+        DELETE FROM "projectjoin" 
+        WHERE project_id = :project_id 
+        AND user_id = :user_id;
+    """)
+
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(query_check_exists, {
+                "user_id": data["user_id"],
+                "project_id": data["project_id"]
+            })
+            request_exists = result.scalar() # Get the count result
+            print(request_exists,"ss")
+            if request_exists == 0:
+                return jsonify({"error": "No join request found"}), 400
+            conn.execute(query_update, {
+                "status": data["status"],
+                "user_id": data["user_id"],
+                "project_id": data["project_id"]
+            })
+
+            if data["status"] == "Accepted":
+                 result1=conn.execute(text("""select * from projectapplication
+                                              
+                      where user_id=:val1 and project_id=:val2                        
+                                              
+                                              
+                                              """),{
+                                                  
+                "val1":data["user_id"],
+                "val2":data["project_id"]
+
+
+                                              })
+                  
+                 rows=result1.fetchall()
+                 datas = [
+    {
+          "application_id": row[0],
+        "user_id":row[1],
+        "project_id":row[2],
+        "role":row[3],
+        "status":row[4],
+        "remarks":row[5]
+      
+    }
+        for row in rows
+]
+
+                 conn.execute(query_insert_member, {
+                    "member_id": data["user_id"],
+                    "project_id": data["project_id"],
+                    "role": datas[0]["role"] #add later
+                })
+
+                 conn.execute(query_delete_others, {
+                    "project_id": data["project_id"],
+                    "user_id": data["user_id"]
+                })
+
+                 conn.commit()
+            else:
+              conn.execute(query_delete_others, {
+                    "project_id": data["project_id"],
+                    "user_id": data["user_id"]
+                })
+            return jsonify({"request": "updated"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
          
 
 
@@ -397,12 +575,13 @@ def list_apply_project_sql(data):
 
         except Exception as e:
             return jsonify({"error": str(e)}), 500
-def update_project_status_sql(data):
+def update_project_application_status_sql(data):
 # ak update status by admin and add in project members table
     # update /apply/takeback project applied
+    #user_id which sent
     with engine.connect() as conn:
       try:
-         result = conn.execute(text("""
+         results = conn.execute(text("""
                 UPDATE projectapplication 
                 SET status = :status
                 WHERE user_id = :user_id AND project_id = :project_id
@@ -414,10 +593,100 @@ def update_project_status_sql(data):
 
          conn.commit()
         
-         if result.rowcount == 0:
+         if results.rowcount == 0:
                 return jsonify({"error": "Application not found"}), 404
+         
+         else:
+            with engine.connect() as conn:
+              
+                  if data["status"] =="Accepted":
+                
+                    #take role from project application table
+                       # include in pm table
+                       #delete from project application table
+                    result1=conn.execute(text("""select * from projectapplication
+                                              
+                      where user_id=:val1 and project_id=:val2                        
+                                              
+                                              
+                                              """),{
+                                                  
+                "val1":data["user_id"],
+                "val2":data["project_id"]
 
-         return jsonify({"message": "Status updated successfully"})
+
+                                              })
+                  
+                    rows=result1.fetchall()
+                    datas = [
+    {
+          "application_id": row[0],
+        "user_id":row[1],
+        "project_id":row[2],
+        "role":row[3],
+        "status":row[4],
+        "remarks":row[5]
+      
+    }
+        for row in rows
+]
+
+
+                                         # include in pm table
+                    with engine.connect() as conn:
+                        res=conn.execute(text(""" INSERT INTO "projectmembers" (project_id, member_id, role)
+        VALUES (:project_id, :member_id, :role)"""),{
+  "member_id": data["user_id"],
+                    "project_id": data["project_id"],
+                    "role": datas[0]["role"] #add later
+
+        })
+                        conn.commit()
+
+
+
+                    with engine.connect() as conn:
+                      result3=conn.execute(text("""
+
+DELETE FROM projectapplication WHERE user_id = :val1 and project_id=:val2
+                                                
+    
+                                            """),{
+
+  
+"val1":data["user_id"],
+"val2":data["project_id"]
+
+
+                                            })
+                      conn.commit()
+              
+               
+                
+                      
+                     
+                    
+                  else:
+                       result4=conn.execute(text("""
+
+DELETE FROM projectapplication WHERE user_id = :val1
+                                                
+    
+                                            """),{
+
+  
+"val1":data["user_id"]
+
+
+                                            })
+                       conn.commit()
+
+         return jsonify({"project":"updated"})
+                      
+                  
+                    
+                  
+             
 
       except Exception as e:
             return jsonify({"error": str(e)}), 500
@@ -432,7 +701,7 @@ def accept_mentor_sql(data):
         #update
         result=conn.execute(text("""
     UPDATE "mentorrequest" 
-    SET status = :status8a
+    SET status = :status
     WHERE mentor_id = :mentor_id AND project_id = :project_id;
 """),{
    
@@ -471,6 +740,228 @@ VALUES (:val1, :val2, :val3);
 
      except Exception as e:
             return jsonify({"error": str(e)}), 500
+     
+
+
+def list_projects_sql(data):
+   
+
+     #show  pending ,part of project,apply ,closed
+     #pending project projectapplication
+     #part of  project  projetct project members
+
+    with engine.connect() as conn:
+     try:
+          result=conn.execute(text(
+             """SELECT 
+    p.*, 
+    CASE 
+        WHEN pm.member_id IS NOT NULL THEN 'Part'
+        WHEN p.status IN ('Completed', 'Active') THEN 'Closed'
+        WHEN pa.status = 'Pending' THEN 'Pending'
+        ELSE 'Apply Now'
+    END AS status
+FROM "Project" AS p
+LEFT JOIN projectmembers AS pm 
+    ON p.project_id = pm.project_id AND pm.member_id = :val1
+LEFT JOIN projectapplication AS pa 
+    ON p.project_id = pa.project_id AND pa.user_id = :val1;
+
+"""
+
+
+
+          ),{
+             
+  'val1':data['user_id']
+
+          })
+          rows=result.fetchall()
+          data = [
+    {   
+        "project_id": row[0],  
+        "admin_id": row[1],  
+        "title": row[2],  
+        "description": row[3],  
+        "start_date": row[4],  
+        "end_date": row[5],  
+        "members_required": row[6],  
+        "status": row[9],  
+        "tags": row[8]  
+    }
+      for row in rows
+]
+           
+
+
+          return jsonify({"project":data})
+     except Exception as e:
+            return jsonify({"error": str(e)}), 500
+          
+       
+
+
+     
+def list_current_projects_sql(data):
+   with engine.connect() as conn:
+      
+    try:
+       result=conn.execute(text("""select p.* ,pm.role
+                                from "Project" as p
+                                join projectmembers as pm
+                                on  p.project_id=pm.project_id
+                                 WHERE pm.member_id = :val1
+                                and p.status in ('Planning','Active')
+      
+                                         
+       
+       """),
+                           
+                           {
+                              
+                        'val1':data['user_id']
+                              })
+       rows=result.fetchall()
+       data = [
+    {   
+        "project_id": row[0],  
+        "admin_id": row[1],  
+        "title": row[2],  
+        "description": row[3],  
+        "start_date": row[4],  
+        "end_date": row[5],  
+        "members_required": row[6],  
+        "status": row[7],  
+        "tags": row[8],
+        "role":row[9]
+    }
+      for row in rows
+]
+           
+       
+
+       return jsonify({"project":data}) 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+def list_past_projects_sql(data):
+       
+       with engine.connect() as conn:
+          try:
+             result=conn.execute(text("""select p.* ,pm.role
+                                from "Project" as p
+                                join projectmembers as pm
+                                on  p.project_id=pm.project_id
+                                 WHERE pm.member_id = :val1
+                                and p.status ='Completed'
+      
+                                         
+       
+       """),
+                                 
+                                 {
+
+
+                          'val1': data['user_id']
+              
+
+                                 })
+             rows=result.fetchall()
+             data = [
+    {   
+        "project_id": row[0],  
+        "admin_id": row[1],  
+        "title": row[2],  
+        "description": row[3],  
+        "start_date": row[4],  
+        "end_date": row[5],  
+        "members_required": row[6],  
+        "status": row[7],  
+        "tags": row[8],
+        "role":row[9] 
+    }
+      for row in rows
+]
+             return jsonify({"project":data}) 
+
+             
+          except Exception as e:
+                     return jsonify({"error": str(e)}), 500
+          
+
+def list_myprojects_sql(data):
+   
+
+     #show  pending ,part of project,apply ,closed
+     #pending project projectapplication
+     #part of  project  projetct project members
+
+    with engine.connect() as conn:
+     try:
+          result=conn.execute(text(
+             """SELECT 
+    p.*, 
+    CASE 
+        WHEN pa.status = 'Pending' THEN 'Applied'
+        WHEN p.status IN ('Completed') THEN 'Completed'
+        wHEN p.status='Active'  THEN 'Active'
+        
+        ELSE 'Apply Now'
+    END AS status
+FROM "Project" AS p
+LEFT JOIN projectmembers AS pm 
+    ON p.project_id = pm.project_id AND pm.member_id = :val1
+LEFT JOIN projectapplication AS pa 
+    ON p.project_id = pa.project_id AND pa.user_id = :val1
+    WHERE pm.project_id IS NOT NULL OR pa.project_id IS NOT NULL;
+
+
+"""
+
+
+
+          ),{
+             
+  'val1':data['user_id']
+
+          })
+          rows=result.fetchall()
+          data = [
+    {   
+        "project_id": row[0],  
+        "admin_id": row[1],  
+        "title": row[2],  
+        "description": row[3],  
+        "start_date": row[4],  
+        "end_date": row[5],  
+        "members_required": row[6],  
+        "status": row[9],  
+        "tags": row[8]  
+    }
+      for row in rows
+]
+           
+
+
+          return jsonify({"project":data})
+     except Exception as e:
+            return jsonify({"error": str(e)}), 500
+          
+       
+
+
+
+             
+       
+       
+
+
+     
+
+
+
+
 
   
      

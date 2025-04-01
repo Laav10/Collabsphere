@@ -4,13 +4,13 @@ from flask import Flask, request, jsonify,make_response
 from flask_cors import CORS  # Import CORS
 import time
 from data_valid import UserSchema,add_project_schema,first_login_schema,list_of_mentors_schema,apply_mentors_schema,apply_mentors_status_takeback_schema
-from data_valid import accept_mentor_schema,apply_project_schema
+from data_valid import accept_mentor_schema,apply_project_schema,apply_project_status_schema,list_apply_project_schema,list_projects_scheme
 from datetime import datetime
 
 from smtp import send_email
 from sql import add_projects,ranking,first_logins,profile_views,list_of_mentors_sql,apply_mentors_sql,apply_project_sql
-from sql import apply_project_status_sql,list_apply_project_sql,update_project_status_sql,apply_project_status_takeback_sql,update_profile_sql,accept_mentor_sql
-from sql import apply_mentors_takeback_sql
+from sql import apply_project_status_sql,list_apply_project_sql,update_project_application_status_sql,apply_project_status_takeback_sql,update_profile_sql,accept_mentor_sql
+from sql import apply_mentors_takeback_sql,list_users_sql,list_projects_sql,list_current_projects_sql,list_past_projects_sql,admin_request_sql,admin_request_accept_sql,list_myprojects_sql,user_insert_google_sql
 from google.cloud.firestore_v1 import FieldFilter
 # Initialize Firebase Admin
 cred = credentials.Certificate("key.json")
@@ -28,10 +28,16 @@ def verify_email():
             user_email = data.get("user_email")
 
             fingerprint = data.get("fingerprint")
+
+            decoded_token = auth.verify_id_token(id_token)  # Verify token
+       
+            if decoded_token['uid'] != uid:
+               return jsonify({"user_verfied": "false"}), 403
             #set in db
            # users.set({"first": "Ada", "last": "Lovelace", "born": 1815})
 
-            response = make_response(jsonify({"success": True, "message": "Cookie Set"}))
+           
+            response = make_response(jsonify({"user_verified": True, "message": "Cookie Set"}))
             response.set_cookie(
             "uid", uid, 
             httponly=True,  # Prevent JS access (security)
@@ -47,7 +53,7 @@ def verify_email():
             max_age=60*60*24*3, ) 
 
             try:
-              print("f")
+              
               users = db.collection('users').document(user_email)
               users.set({
     "uid": uid,
@@ -83,22 +89,33 @@ def verify():
     id_token = data.get("idToken")
     uid = data.get("uid")
     email=data.get("email")
-    username= transform_email(email)
+    roll_no= transform_email(email)
 
     fingerprint = data.get("fingerprint")
-    print(data)
+    #print(data)
     try:
         decoded_token = auth.verify_id_token(id_token)  # Verify token
+        user_name = decoded_token.get('name')
+        print(f"User name: {user_name}")
+        user_name = user_name.replace("-IIITK", "").strip()
+        data['user_name']=user_name
+        data[roll_no]=roll_no
+        #data[user_name]=user_name
+       
+
         #print(decoded_token)
         if decoded_token['uid'] != uid:
-            return jsonify({"error": "UID mismatch"}), 403
-
+              return jsonify({"user_verfied": "false"}), 403
         # Verify fingerprint (implement fingerprint logic)
        # if fingerprint :
           #return jsonify({"error": "Fingerprint mismatch"}), 403
         try:
-            print(username)
-            users = db.collection('users').document(username)
+         #   print(username)
+            users = db.collection('users').document(roll_no)
+            user_insert_google_sql(data)
+        
+
+            
             users.set({
     "uid": uid,
     "fingerprint": fingerprint,
@@ -106,11 +123,12 @@ def verify():
            # Add to Firestore
             print("success")
             print("ds")
-            response = make_response(jsonify({"success": True, "message": "User verified!"}))
+            response = make_response(jsonify({"user_verified": True, "message": "cookie set"}))
             response.set_cookie(
             "fingerprint", fingerprint, 
          
             httponly=True,  # Prevent JS access (security)
+            
             secure=True,  # Only allow over HTTPS
             samesite="None",  # Restrict cross-site access
             max_age=60*60*24*3,  # 7 days expiration
@@ -125,7 +143,7 @@ def verify():
             max_age=60*60*24*3,  # 7 days expiration
             
             )
-            print(response.headers)
+           # print(response.headers)
             return response
                #add user in db if not present
         except Exception as e:
@@ -142,12 +160,15 @@ def auto_login():
     if request.method=='GET':
      #    uid=request.cookies.get("uid")
        #  print(uid)
+       #take fingerprint frontend
        
      uid=request.cookies.get("uid")
+
+     
      fingerprint=request.cookies.get("fingerprint")
 
 
-     if not uid:
+     if not uid or not fingerprint:
         return jsonify({"authenticated": False, "message": "Session expired"}), 401
      
 
@@ -187,7 +208,7 @@ def add_project():
     data = request.json
     errors=add_project_schema().validate(data)
     if errors:
-        return jsonify({"errordd": errors}), 400
+        return jsonify({"error": errors}), 400
     else:
        return add_projects(data)
     
@@ -225,7 +246,7 @@ def update_profile():
      return update_profile_sql(data)
 
 
-@app.route('/list/mentors',methods=['POST'])
+"""@app.route('/list/mentors',methods=['POST'])
 def list_of_mentors():
      data=request.json
      errors=list_of_mentors_schema().validate(data)
@@ -260,6 +281,46 @@ def accept_mentor():
      else:
          #required mentor_id(user_id),project_id
        return accept_mentor_sql(data)
+     """
+@app.route('/list/projects',methods=['POST'])
+def list_projects():
+    data=request.json
+    errors=list_projects_scheme().validate(data)
+    if errors:
+        return jsonify({"errors":errors}),400
+    
+    else:
+        return list_projects_sql(data)
+    
+@app.route('/list/current/projects',methods=['POST'])
+def list_current_projects():
+    data=request.json
+    errors=list_projects_scheme().validate(data)
+    if errors:
+        return  jsonify({"errors":errors}),400
+    else:
+        return list_current_projects_sql(data)
+    
+
+@app.route('/list/past/projects',methods=['POST'])
+def list_past_projects():
+    data=request.json
+    errors=list_projects_scheme().validate(data)
+    if errors:
+        return  jsonify({"errors":errors}),400
+    else:
+        return list_past_projects_sql(data)
+    
+@app.route('/list/myprojects',methods=['POST'])
+def list_myprojects():
+    data=request.json
+    errors=list_projects_scheme().validate(data)
+    if errors:
+        return  jsonify({"errors":errors}),400
+    else:
+        return list_myprojects_sql(data)
+     
+ 
 
 @app.route('/apply/project',methods=['POST'])
 def apply_project():
@@ -271,23 +332,70 @@ def apply_project():
         return apply_project_sql(data)
 @app.route('/apply/project/status',methods=['POST'])
 def apply_project_status():
+    
   data=request.json
-  return apply_project_status_sql(data)
+  errors=apply_project_status_schema().validate(data)
+  if errors:
+        return jsonify({"errors": errors}), 400
+  else:
+     return apply_project_status_sql(data)
 
 @app.route('/apply/project/status/takeback',methods=['POST'])
 def apply_project_status_takeback():
     data=request.json
-    return apply_project_status_takeback_sql(data)
+    errors=apply_project_status_schema().validate(data)
+    if errors:
+        return jsonify({"errors": errors}), 400
+    else:
+        
+        return apply_project_status_takeback_sql(data)
 
 @app.route('/list/apply/status',methods=['POST'])
 def list_apply_project_():
     data=request.json
+    errors=list_apply_project_schema().validate(data)
     return list_apply_project_sql(data)
 
-@app.route('/update/project/status',methods=['POST'])
+@app.route('/update/project/app/status',methods=['POST'])
 def list_update_project_status():
     data=request.json
-    return update_project_status_sql(data)
+   # errors=update_project_status_schema().validate(data)
+    return update_project_application_status_sql(data)
+
+#delete project by admi
+
+@app.route('/admin/request',methods=['POST'])
+
+def admin_request():
+ #check user_id is admin or not  later 
+ data=request.json
+#check whether user is admin  then request
+
+ return admin_request_sql(data)
+
+
+
+@app.route('/admin/request/accept',methods=['POST'])
+
+def admin_request_accept():
+ #check user_id is admin or not  later 
+ data=request.json
+#check whether user is admin  then request
+
+ return admin_request_accept_sql(data)
+
+
+
+
+
+
+#discuss request to join
+
+ 
+@app.route('/list/users',methods=['GET'])
+def list_users():
+    
+     return list_users_sql()
 
 
      
