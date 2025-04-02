@@ -33,6 +33,11 @@ export default function MyProjects() {
             "Content-Type": "application/json",
           },
            // Replace with the actual user ID
+           body: JSON.stringify({
+          
+            user_id: 1, 
+            
+          }),
         })
 
         if (!response.ok) {
