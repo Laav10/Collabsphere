@@ -36,39 +36,43 @@ export default function ProjectsPage() {
   const [error, setError] = useState<string | null>(null)
 
   // Fetch projects from the API
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch("http://127.0.0.1:5000/list/projects", {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        })
+ // Fetch projects from the API
+useEffect(() => {
+  const fetchProjects = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch("http://127.0.0.1:5000/list/projects", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: 1, 
+        }),
+      })
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`)
-        }
-
-        const data = await response.json()
-        console.log("API Response:", data)
-        
-        // Check if data has a projects property, otherwise use data itself
-        const projectData = data.projects || data
-        setProjects(projectData)
-        setError(null)
-      } catch (error) {
-        console.error("Error fetching projects:", error)
-        setError("Failed to load projects. Please try again later.")
-      } finally {
-        setLoading(false)
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`)
       }
-    }
 
-    fetchProjects()
-  }, [])
+      const data = await response.json()
+      console.log("API Response:", data)
+      
+      // Check if data has a project property (based on the response structure)
+      const projectData = data.project || []
+      setProjects(projectData)
+      setError(null)
+    } catch (error) {
+      console.error("Error fetching projects:", error)
+      setError("Failed to load projects. Please try again later.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  fetchProjects()
+}, [])
 
   // Handle applying to a project
   const handleApplyToProject = async (projectId: number) => {
@@ -108,14 +112,26 @@ export default function ProjectsPage() {
       alert("Failed to apply to project. Please try again.")
     }
   }
-
-  // Process tags for each project
-  const processedProjects = projects.map(project => {
-    return {
-      ...project,
-      tagArray: project.tags ? project.tags.split(',').map(tag => tag.trim()) : []
+// Process tags for each project
+const processedProjects = projects.map(project => {
+  // Handle different tag formats: "{tag1,tag2}" or "tag1, tag2" or empty
+  let tagArray: string[] = []
+  
+  if (project.tags) {
+    // Remove curly braces if present
+    const cleanTags = project.tags.replace(/^\{|\}$/g, '')
+    
+    if (cleanTags.trim()) {
+      // Split by comma and trim each tag
+      tagArray = cleanTags.split(/,\s*/).map(tag => tag.trim())
     }
-  })
+  }
+  
+  return {
+    ...project,
+    tagArray
+  }
+})
 
   // Filter mentors based on search query and selected expertise
   const filteredMentors = mentorsData.filter((mentor) => {
