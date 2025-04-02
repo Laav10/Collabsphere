@@ -8,7 +8,17 @@ import {
   MonitorSmartphone,
 } from "lucide-react";
 
-export default function FeaturesSection() {
+
+interface Project {
+  project_id: number;
+  score: number;
+  title: string;
+}
+interface FeaturesSectionProps {
+  data: { project: Project[] };
+}
+export default function FeaturesSection({ data }: FeaturesSectionProps) {
+  
   return (
     <div className="w-full bg-black text-white py-16 px-4 md:px-8 lg:px-16">
       <div className="max-w-7xl mx-auto">
@@ -72,7 +82,7 @@ export default function FeaturesSection() {
           </div>
         </div>
       </div>
-      <ProjectLayout />
+      <ProjectLayout data={data}  />
       <Footerpage />
     </div>
   );

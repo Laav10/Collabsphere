@@ -1,17 +1,46 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import Footer from "@/components/Footerpage"
 import FeaturesSection from "@/components/features"
 import GoogleLogin from "@/components/GoogleLogin"
 
+
 export default function Home() {
+  interface Project {
+    project_id: number;
+    score: number;
+    title: string;
+  }
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const router = useRouter() // Use useRouter hook
+  const [projects, setProjects] = useState<Project[]>([]);
 
   useEffect(() => {
+    
+    const fetchData = async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:5000/best_projects", {
+          method: "GET",
+          credentials: "include", // Include cookies if needed
+        });
+    
+        if (!response.ok) {
+          console.log("Error fetching data:", response.statusText);
+          return;
+        }    
+        const data = await response.json();
+        setProjects(data.project); // Assuming API returns an array of projects
+
+        console.log("Server Response:", data);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+    fetchData()
+
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -70,7 +99,9 @@ export default function Home() {
   }, [])
 
   return (
+    
     <main className="min-h-screen bg-black text-white">
+    
       <div className="container mx-auto px-4 py-12">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="relative">
@@ -81,12 +112,12 @@ export default function Home() {
             <p className="text-xl text-gray-400">
               CollabSphere enables students to connect, collaborate, and build impactful projects together.
             </p>
-      <GoogleLogin />
+            <GoogleLogin />
           </div>
         </div>
 
         <div className="mt-24">
-          <FeaturesSection />
+  <FeaturesSection  data={{ project: projects }} />
         </div>
       </div>
     </main>

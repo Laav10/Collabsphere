@@ -22,7 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns"
 import { CalendarIcon, Plus, Clock, Users, CheckCircle2, Circle, ArrowRight } from "lucide-react"
 import { cn } from "@/lib/utils"
-import TeamMemberDropdown from "@/components/team-member-card"
+import TeamMemberDropdown from "@/components/team-members"
 
 
 type Task = {
