@@ -13,7 +13,6 @@ export default function TeamPage() {
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile[]>([]);
 
-  // Fetch user data from the backend
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -24,19 +23,33 @@ export default function TeamPage() {
             "Content-Type": "application/json",
           },
         });
-
+  
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
-
+  
         const data: UserProfile[] = await response.json();
-        console.log("Server Response:", data);
-        setUserProfile(data);
+        
+        // Fix the tech_stack by joining characters or processing them correctly
+        const processedData = data.map(user => ({
+          ...user,
+
+          // If tech_stack contains individual characters, join them or process as needed
+          // This is just an example approach - you might need to adjust based on your actual data
+          tech_stack: Array.isArray(user.tech_stack) ? 
+            [user.tech_stack.join("")] : // Join characters into a single skill
+            typeof user.tech_stack === 'string' ? 
+              [user.tech_stack] : // Handle if it's a string
+              [] // Fallback for undefined/null
+        }));
+        
+        console.log("Processed Data:", processedData);
+        setUserProfile(processedData);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
     };
-
+  
     fetchData();
   }, []);
 

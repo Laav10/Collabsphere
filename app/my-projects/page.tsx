@@ -28,10 +28,11 @@ export default function MyProjects() {
       try {
         const response = await fetch("http://127.0.0.1:5000/list/myprojects", {
           method: "POST",
+          credentials: "include", 
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ user_id: 1 }), // Replace with the actual user ID
+           // Replace with the actual user ID
         })
 
         if (!response.ok) {
