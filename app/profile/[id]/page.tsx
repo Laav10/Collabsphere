@@ -27,6 +27,7 @@ import {
   Github,
   Linkedin,
 } from "lucide-react";
+import Navbar from "@/components/navbar";
 // Sample user data
 
 // Sample projects data
@@ -106,7 +107,7 @@ const hackathonsData = [
 
 export default function SettingsPage() {
   const router = useRouter(); // Initialize useRouter
-
+  const [activeNav, setActiveNav] = useState("profile")
   const [tech, setTech] = useState(""); // Moved inside the component
   const [techStack, setTechStack] = useState<string[]>([]); // Moved inside the component
   const [userData, setuserData] = useState<User>({
@@ -138,7 +139,6 @@ export default function SettingsPage() {
   const handleRemoveTech = (itemToRemove: string) => {
     setTechStack((prev) => prev.filter((item) => item !== itemToRemove));
   };
-  const [activeNav, setActiveNav] = useState("settings");
   const [roll_no, setroll_no] = useState(3);
   interface User {
     name:string;
@@ -307,72 +307,7 @@ export default function SettingsPage() {
   
   return (
     <div className="flex min-h-screen bg-black text-white">
-      {/* Sidebar */}
-      <div className="w-64 bg-gray-900 p-4">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-pink-500">CollabSphere</h1>
-        </div>
-
-        <nav className="space-y-2">
-          <Link
-            href="/dashboard"
-            className="w-full flex items-center space-x-2 p-3 rounded-md text-gray-300 hover:bg-gray-800"
-          >
-            <LayoutDashboard className="h-5 w-5" />
-            <span>Dashboard</span>
-          </Link>
-
-          <button
-            className={`w-full flex items-center space-x-2 p-3 rounded-md ${
-              activeNav === "projects"
-                ? "bg-pink-500 text-white"
-                : "text-gray-300 hover:bg-gray-800"
-            }`}
-            onClick={() => setActiveNav("projects")}
-          >
-            <FolderKanban className="h-5 w-5" />
-            <span>Projects</span>
-          </button>
-
-          <button
-            className={`w-full flex items-center space-x-2 p-3 rounded-md ${
-              activeNav === "team"
-                ? "bg-pink-500 text-white"
-                : "text-gray-300 hover:bg-gray-800"
-            }`}
-            onClick={() => setActiveNav("team")}
-          >
-            <Users className="h-5 w-5" />
-            <span>Team</span>
-          </button>
-
-          <button
-            className={`w-full flex items-center space-x-2 p-3 rounded-md ${
-              activeNav === "analytics"
-                ? "bg-pink-500 text-white"
-                : "text-gray-300 hover:bg-gray-800"
-            }`}
-            onClick={() => setActiveNav("analytics")}
-          >
-            <BarChart3 className="h-5 w-5" />
-            <span>Analytics</span>
-          </button>
-
-          <button
-            className={`w-full flex items-center space-x-2 p-3 rounded-md ${
-              activeNav === "settings"
-                ? "bg-pink-500 text-white"
-                : "text-gray-300 hover:bg-gray-800"
-            }`}
-            onClick={() => setActiveNav("settings")}
-          >
-            <Settings className="h-5 w-5" />
-            <span>Settings</span>
-          </button>
-        </nav>
-      </div>
-
-      {/* Main content */}
+          <Navbar  activeNav={activeNav} setActiveNav={setActiveNav}   />
       <div className="flex-1 p-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Profile & Settings</h1>

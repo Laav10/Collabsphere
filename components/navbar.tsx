@@ -49,7 +49,7 @@ export default function Navbar({ activeNav, setActiveNav }: NavbarProps) {
           </Link>
 
           <Link
-            href="/profile"
+            href="/profile/sanjay"
             className={`w-full flex items-center space-x-2 p-3 rounded-md ${
               activeNav === "profile" ? "bg-pink-500 text-white" : "text-gray-300 hover:bg-gray-800"
             }`}

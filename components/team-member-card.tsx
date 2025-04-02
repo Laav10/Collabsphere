@@ -1,8 +1,7 @@
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Star, Mail, UserPlus } from "lucide-react"
+import { Star } from "lucide-react"
 import type { TeamMember } from "@/lib/types"
 
 interface TeamMemberCardProps {
