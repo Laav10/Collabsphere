@@ -4,26 +4,41 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Calendar, Users, Clock } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
-import type { Project } from "@/lib/types"
+
+
+interface Project {
+  admin_id: number
+  description: string
+  project_id: number
+  end_date: string
+  members_required: number
+  start_date: string
+  status: string
+  title: string
+  tags: string
+}
+
 
 interface ProjectCardProps {
   project: Project
+
 }
 
 export default function ProjectCard({ project }: ProjectCardProps) {
-  const { id, name, description, type, techStack, startDate, endDate, progress, teamMembers, status } = project
+  const { project_id, title, description, tags,  start_date, end_date, members_required  , status } = project
+  const tagArray = tags.split(",").map((tag) => tag.trim())
 
   // Calculate days remaining or days since completion
   const today = new Date()
-  const end = new Date(endDate)
+  const end = new Date(end_date)
   const timeRemaining = formatDistanceToNow(end, { addSuffix: true })
 
   return (
-    <Link href={`/project/${id}`}>
+    <Link href={`/project/${project_id}`}>
       <Card className="bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-all h-full flex flex-col">
         <CardHeader className="pb-2">
           <div className="flex justify-between items-start">
-            <CardTitle className="text-xl font-semibold text-white">{name}</CardTitle>
+            <CardTitle className="text-xl font-semibold text-white">{title}</CardTitle>
             <Badge
               variant="outline"
               className={
@@ -42,31 +57,20 @@ export default function ProjectCard({ project }: ProjectCardProps) {
 
         <CardContent className="py-2 flex-grow">
           <div className="flex flex-wrap gap-1 mb-4">
-            {techStack.map((tech, index) => (
+          {tagArray.map((tech, index) => (
               <Badge key={index} variant="secondary" className="bg-zinc-800">
                 {tech}
               </Badge>
             ))}
           </div>
 
-          {status !== "applied" && (
-            <div className="space-y-1 mb-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Progress</span>
-                <span className="font-medium">{progress}%</span>
-              </div>
-              <Progress value={progress} className="h-2 bg-zinc-800">
-                <div className={`h-full rounded-full ${status === "completed" ? "bg-blue-500" : "bg-pink-500"}`} />
-              </Progress>
-            </div>
-          )}
         </CardContent>
 
         <CardFooter className="pt-2 border-t border-zinc-800 flex flex-col space-y-2">
           <div className="flex justify-between w-full text-xs text-muted-foreground">
             <div className="flex items-center">
               <Calendar className="h-3 w-3 mr-1" />
-              <span>{new Date(startDate).toLocaleDateString()}</span>
+              <span>{new Date(start_date).toLocaleDateString()}</span>
             </div>
             <div className="flex items-center">
               <Clock className="h-3 w-3 mr-1" />
@@ -77,13 +81,9 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           <div className="flex justify-between w-full text-xs text-muted-foreground">
             <div className="flex items-center">
               <Users className="h-3 w-3 mr-1" />
-              <span>{teamMembers.length} members</span>
+              <span>{members_required} members</span>
             </div>
-            <div>
-              <Badge variant="outline" className="text-xs bg-zinc-800 font-normal">
-                {type}
-              </Badge>
-            </div>
+           
           </div>
         </CardFooter>
       </Card>

@@ -235,9 +235,7 @@ export default function ProjectsPage() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                 <Input placeholder="Search projects..." className="pl-10 bg-gray-800 border-gray-700" />
               </div>
-              <Button className="bg-gradient-to-r from-pink-500 to-purple-500 text-white">
-                <PlusCircle className="mr-2 h-4 w-4" /> Create Project
-              </Button>
+             
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
