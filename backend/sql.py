@@ -89,10 +89,10 @@ def add_projects(data):
          return jsonify({"project":"already exist"}), 401
    
    else:
-      with engine.connect() as conn:
+    with engine.connect() as conn:
        # check whether with same admin same name other project exist
-       try:
-        result=conn.execute(text("""INSERT INTO "Project"
+     try:
+         result=conn.execute(text("""INSERT INTO "Project"
 (admin_id, title, description, start_date, end_date, members_required, status, tags)
                                 values
             (:val1,:val2,:val3,:val4,:val5,:val6,:val7,:val8)"""),{
@@ -107,14 +107,34 @@ def add_projects(data):
          "val8":data['tags']
           
           })
-        conn.commit()
+         result1=conn.execute(text("""select project_id from "Project"
+                                   where admin_id=:val1 and title=:val2""")
+                                   ,{
+                                       
+"val1":data['admin_id'],
+          "val2":data['title'],
+
+                                   })
+         project_id=result1.fetchall()[0].project_id
+         query = """
+INSERT INTO projectmembers (project_id, member_id, role)
+VALUES (:val1, :val2, :val3)
+"""
+
+# Execute the query using bound parameters
+         result2 = conn.execute(text(query), {
+    "val1": project_id,
+    "val2": data['admin_id'],
+    "val3": "admin"
+})        
+         conn.commit()
          
-        return jsonify({"project":"added"})
+         return jsonify({"project":"added"})
 
 
        
 
-       except Exception as e: 
+     except Exception as e: 
          return jsonify({"error": str(e)}), 500 
 def ranking():
     with engine.connect() as conn:
@@ -141,7 +161,7 @@ def ranking():
     for row in rows
 ]
         
-        print(data)
+        #print(data)
         return jsonify({"project": data})
 def first_logins(data):
        with engine.connect() as conn:
@@ -200,11 +220,10 @@ def update_profile_sql(data):
             past_experience = :past_experience,
             tech_stack = :tech_stack,
             github_profile = :github_profile,
-            linkedin_profile = :linkedin_profile,
+            linkedin_profile = :linkedin_profile
            
             
-            email_update = :email_update,
-            project_update = :project_update
+           
         WHERE roll_no = :roll_no
     """)
 
@@ -214,16 +233,19 @@ def update_profile_sql(data):
         "tech_stack": data["tech_stack"],
         "github_profile": data["github_profile"],
         "linkedin_profile": data["linkedin_profile"],
+        "roll_no":data["roll_no"]
        
-        "email_update": data["email_update"],
-        "project_update": data["project_update"],
-        "roll_no": data["roll_no"]
+      
+        
     })
-
+  
             conn.commit()
             return jsonify({"profile":"updated"})
         except Exception as e:
+            
+            print(e,"s")
             return jsonify({"error": str(e)}), 500
+            print(e,"s")
         
 
 
@@ -466,7 +488,7 @@ def admin_request_accept_sql(data):
             })
 
             if data["status"] == "Accepted":
-                 result1=conn.execute(text("""select * from projectapplication
+                 result1=conn.execute(text("""select * from projectjoin
                                               
                       where user_id=:val1 and project_id=:val2                        
                                               
@@ -510,6 +532,7 @@ def admin_request_accept_sql(data):
                     "project_id": data["project_id"],
                     "user_id": data["user_id"]
                 })
+              conn.commit()
             return jsonify({"request": "updated"}), 200
 
     except Exception as e:
@@ -947,6 +970,63 @@ LEFT JOIN projectapplication AS pa
           return jsonify({"project":data})
      except Exception as e:
             return jsonify({"error": str(e)}), 500
+
+
+
+def notification_sql(data):
+ with engine.connect() as conn:
+    result = conn.execute(text("""
+    SELECT * 
+    FROM projectapplication 
+    WHERE user_id = :user_id
+    AND status = 'Pending';
+"""), {"user_id": data["user_id"]})
+    pending_applications = result.fetchall()
+
+    applications_json = [
+    {
+        "application_id": application[0],
+        "user_id": application[1],
+        "project_id": application[2],
+        "role": application[3],
+        "status": application[4],
+        "applied_at": application[5].isoformat(),  # Convert timestamp to ISO format string
+        "remarks": application[6],
+        "applied":"user"
+    }
+    for application in pending_applications
+    ]
+
+    result = conn.execute(text("""
+    SELECT * 
+    FROM projectjoin
+    WHERE user_id = :user_id
+    AND status = 'Pending';
+"""), {"user_id": data["user_id"]})
+    
+
+    project_join_results = result.fetchall()
+
+    project_joins_json = [
+    {
+        "application_id": application[0],
+        "user_id": application[1],
+        "project_id": application[2],
+        "role": application[3],
+        "status": application[4],
+        "applied_at": application[5].isoformat(),  # Convert timestamp to ISO format string
+        "remarks": application[6],
+        "applied":"admin"
+    }
+    for application in project_join_results
+    ]
+    all_notifications_json = applications_json + project_joins_json
+    return jsonify({"notification":all_notifications_json}),200
+
+
+
+     
+     
           
        
 

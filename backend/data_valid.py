@@ -10,8 +10,8 @@ class UserSchema(Schema):
     linkedin_profile = fields.Url(allow_none=True)  # Optional
     role_type = fields.Str(validate=validate.OneOf(["student", "professor", "alumni"]))  # Enum validation
     rating = fields.Float(validate=validate.Range(min=0, max=5))  # 0 to 5 rating
-    email_update = fields.Bool(missing=False)  # Default: False
-    project_update = fields.Bool(missing=False)  # Default: False
+    #email_update = fields.Bool(missing=False)  # Default: False
+    #project_update = fields.Bool(missing=False)  # Default: False
     class Meta:
         unknown = EXCLUDE
 

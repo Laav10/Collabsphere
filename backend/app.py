@@ -5,7 +5,8 @@ from flask_cors import CORS  # Import CORS
 import time
 from data_valid import UserSchema,add_project_schema,first_login_schema,list_of_mentors_schema,apply_mentors_schema,apply_mentors_status_takeback_schema
 from data_valid import accept_mentor_schema,apply_project_schema,apply_project_status_schema,list_apply_project_schema,list_projects_scheme
-from datetime import datetime
+from datetime import datetime,timedelta
+from auth import  firebase_uid_required  # Import auth_bp
 
 from smtp import send_email
 from sql import add_projects,ranking,first_logins,profile_views,list_of_mentors_sql,apply_mentors_sql,apply_project_sql
@@ -19,6 +20,7 @@ db = firestore.client()
 users = db.collection('users')
 
 app = Flask(__name__)
+
 CORS(app,supports_credentials=True)
 @app.route('/verify/user_id',methods=['POST'])
 def verify_email():
@@ -105,13 +107,14 @@ def verify():
 
         #print(decoded_token)
         if decoded_token['uid'] != uid:
-              return jsonify({"user_verfied": "false"}), 403
+              return jsonify({"user_verfied": "false",}), 403
         # Verify fingerprint (implement fingerprint logic)
        # if fingerprint :
           #return jsonify({"error": "Fingerprint mismatch"}), 403
         try:
          #   print(username)
-            users = db.collection('users').document(roll_no)
+         #not for prof
+            users = db.collection('users').document( email.split('@')[0] )
             user_insert_google_sql(data)
         
 
@@ -123,7 +126,7 @@ def verify():
            # Add to Firestore
             print("success")
             print("ds")
-            response = make_response(jsonify({"user_verified": True, "message": "cookie set"}))
+            response = make_response(jsonify({"user_verified": True, "message": "cookie set","roll_no":roll_no}))
             response.set_cookie(
             "fingerprint", fingerprint, 
          
@@ -157,7 +160,8 @@ def verify():
  
 @app.route('/auto_login',methods=['GET','POST'])
 def auto_login():
-    if request.method=='GET':
+    if request.method=='POST':
+     data=request.json()
      #    uid=request.cookies.get("uid")
        #  print(uid)
        #take fingerprint frontend
@@ -165,31 +169,39 @@ def auto_login():
      uid=request.cookies.get("uid")
 
      
-     fingerprint=request.cookies.get("fingerprint")
-
+     fingerprint=data["fingerprint"]
 
      if not uid or not fingerprint:
         return jsonify({"authenticated": False, "message": "Session expired"}), 401
      
 
-     try:
+    try:
        #user=auth.get_user(uid)
       # use firebase client and set expiration time
-       result = users.where(filter=FieldFilter("uid", "==", uid)) \
-              .where(filter=FieldFilter("fingerprint", "==", fingerprint))
+      three_days_ago = datetime.utcnow() - timedelta(days=3)
 
-       output=result.get()
-       if output:
+# Convert the datetime to a string or timestamp format suitable for the database
+      three_days_ago_str = three_days_ago.strftime('%Y-%m-%dT%H:%M:%S')  # Example format
+
+# Apply the filters: uid, fingerprint, and created_at within the last 3 days
+      result = users.where(filter=FieldFilter("uid", "==", uid)) \
+              .where(filter=FieldFilter("fingerprint", "==", fingerprint)) \
+              .where(filter=FieldFilter("created_at", "<=", three_days_ago_str))
+       #result = users.where(filter=FieldFilter("uid", "==", uid)) \
+              #.where(filter=FieldFilter("fingerprint", "==", fingerprint))
+
+      output=result.get()
+      if output:
              
          return jsonify({
             "authenticated": True,
 
         })
-       else:
+      else:
             return jsonify({"authenticated": False, "message": "Invalid session"}), 401
 
 
-     except:
+    except:
          return jsonify({"authenticated": False, "message": "Invalid session"}), 401
 @app.route('/logout',methods=['GET'])
 def logout():
@@ -202,7 +214,10 @@ def logout():
     return jsonify({"deleted":False}), 500
 
 @app.route('/add/project',methods=['POST'])
+@firebase_uid_required  # Apply the middleware here to protect the route
+
 def add_project():
+
 
 
     data = request.json
@@ -213,6 +228,7 @@ def add_project():
        return add_projects(data)
     
 @app.route('/best_projects',methods=['GET'])
+
 def best_projects():
       
       return ranking()
@@ -236,14 +252,16 @@ def profile_view():
           return profile_views(data)
 
 @app.route('/update/profile',methods=['POST'])
+@firebase_uid_required  # Apply the middleware here to protect the route
+
 def update_profile():
     data=request.json
     schema = UserSchema()
-    errors = schema.validate(data)
-    if errors:
-        return jsonify({"errordd": errors}), 400
-    else:
-     return update_profile_sql(data)
+   # errors = schema.validate(data)
+   # if errors:
+      #  return jsonify({"errordd": errors}), 400
+    #else:
+    return update_profile_sql(data)
 
 
 """@app.route('/list/mentors',methods=['POST'])
@@ -283,6 +301,8 @@ def accept_mentor():
        return accept_mentor_sql(data)
      """
 @app.route('/list/projects',methods=['POST'])
+ # Apply the middleware here to protect the route
+
 def list_projects():
     data=request.json
     errors=list_projects_scheme().validate(data)
@@ -293,6 +313,7 @@ def list_projects():
         return list_projects_sql(data)
     
 @app.route('/list/current/projects',methods=['POST'])
+
 def list_current_projects():
     data=request.json
     errors=list_projects_scheme().validate(data)
@@ -312,6 +333,8 @@ def list_past_projects():
         return list_past_projects_sql(data)
     
 @app.route('/list/myprojects',methods=['POST'])
+
+  # Apply the middleware here to protect the route
 def list_myprojects():
     data=request.json
     errors=list_projects_scheme().validate(data)
@@ -323,6 +346,8 @@ def list_myprojects():
  
 
 @app.route('/apply/project',methods=['POST'])
+ # Apply the middleware here to protect the route
+
 def apply_project():
       data=request.json
       errors=apply_project_schema().validate(data)
@@ -331,6 +356,8 @@ def apply_project():
       else:
         return apply_project_sql(data)
 @app.route('/apply/project/status',methods=['POST'])
+@firebase_uid_required  # Apply the middleware here to protect the route
+
 def apply_project_status():
     
   data=request.json
@@ -341,6 +368,8 @@ def apply_project_status():
      return apply_project_status_sql(data)
 
 @app.route('/apply/project/status/takeback',methods=['POST'])
+@firebase_uid_required  # Apply the middleware here to protect the route
+
 def apply_project_status_takeback():
     data=request.json
     errors=apply_project_status_schema().validate(data)
@@ -351,12 +380,16 @@ def apply_project_status_takeback():
         return apply_project_status_takeback_sql(data)
 
 @app.route('/list/apply/status',methods=['POST'])
+@firebase_uid_required  # Apply the middleware here to protect the route
+
 def list_apply_project_():
     data=request.json
     errors=list_apply_project_schema().validate(data)
     return list_apply_project_sql(data)
 
 @app.route('/update/project/app/status',methods=['POST'])
+@firebase_uid_required  # Apply the middleware here to protect the route
+
 def list_update_project_status():
     data=request.json
    # errors=update_project_status_schema().validate(data)
@@ -365,6 +398,8 @@ def list_update_project_status():
 #delete project by admi
 
 @app.route('/admin/request',methods=['POST'])
+@firebase_uid_required  # Apply the middleware here to protect the route
+
 
 def admin_request():
  #check user_id is admin or not  later 
@@ -376,6 +411,8 @@ def admin_request():
 
 
 @app.route('/admin/request/accept',methods=['POST'])
+@firebase_uid_required  # Apply the middleware here to protect the route
+
 
 def admin_request_accept():
  #check user_id is admin or not  later 
@@ -393,6 +430,8 @@ def admin_request_accept():
 
  
 @app.route('/list/users',methods=['GET'])
+#@firebase_uid_required  # Apply the middleware here to protect the route
+
 def list_users():
     
      return list_users_sql()
@@ -401,6 +440,15 @@ def list_users():
      
 if __name__ == "__main__":
     app.run(debug=True)
+
+@app.route('/notification',methods=['POST'])
+@firebase_uid_required  # Apply the middleware here to protect the route
+
+def notification():
+
+
+    return notification_sql()
+
 
 
 
