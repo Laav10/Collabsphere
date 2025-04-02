@@ -12,6 +12,7 @@ from smtp import send_email
 #from sql import apply_project_status_sql,list_apply_project_sql,update_project_application_status_sql,apply_project_status_takeback_sql,update_profile_sql,accept_mentor_sql
 #from sql import apply_mentors_takeback_sql,list_users_sql,list_projects_sql,list_current_projects_sql,list_past_projects_sql,admin_request_sql,admin_request_accept_sql,list_myprojects_sql,user_insert_google_sql
 from sql import *
+from sql import engine
 from google.cloud.firestore_v1 import FieldFilter
 
 # Initializing  Firebase Admin - Aditya 
@@ -458,16 +459,6 @@ def add_task(conn, project_id, sprint_number, description, assigned_to, points):
         """, (project_id, sprint_number, description, assigned_to, points))
         conn.commit()
 
-@app.route('/project/update_tasks', methods=['GET'])   
-def update_task(conn, task_id, description, assigned_to, status):
-    with conn.cursor() as cur:
-        cur.execute("""
-            UPDATE task 
-            SET description = %s, assigned_to = %s, status = %s
-            WHERE id = %s
-        """, (description, assigned_to, status, task_id))
-        conn.commit()
-
 @app.route('/project/view_sprints', methods=['GET'])   
 def get_sprints(conn, project_id):
     with conn.cursor() as cur:
@@ -479,7 +470,7 @@ def get_sprints(conn, project_id):
         return cur.fetchall()
     
 @app.route('/project/edit_tasks/add_task', methods=['POST'])
-def add_task():
+def add_task_route(): # Renamed to avoid function name conflicts
     data = request.json
     project_id = data['project_id']
     sprint_number = data['sprint_number']
@@ -487,30 +478,36 @@ def add_task():
     assigned_to = data['assigned_to']
     points = data['points']
 
-    conn = get_db_connection()
-    sql.add_task(conn, project_id, sprint_number, description, assigned_to, points)
-    conn.close()
-    return jsonify({"message": "Task added successfully!"}), 201
+    try:
+        with engine.connect() as conn:
+            add_task(conn, project_id, sprint_number, description, assigned_to, points)
+        return jsonify({"message": "Task added successfully!"}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/project/edit_tasks/update_task', methods=['POST'])
-def update_task():
+def update_task_route(): # Renamed to avoid function name conflicts
     data = request.json
     task_id = data['task_id']
     description = data['description']
     assigned_to = data['assigned_to']
     status = data['status']
 
-    conn = get_db_connection()
-    sql.update_task(conn, task_id, description, assigned_to, status)
-    conn.close()
-    return jsonify({"message": "Task updated successfully!"})
+    try:
+        with engine.connect() as conn:
+            update_task(conn, task_id, description, assigned_to, status)
+        return jsonify({"message": "Task updated successfully!"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/project/edit_tasks/get_sprints/<int:project_id>', methods=['GET'])
-def get_sprints(project_id):
-    conn = get_db_connection()
-    sprints = sql.get_sprints(conn, project_id)
-    conn.close()
-    return jsonify({"sprints": [{"sprint_id": s[0], "name": s[1]} for s in sprints]})
+def get_sprints_route(project_id): # Renamed to avoid function name conflicts
+    try:
+        with engine.connect() as conn:
+            sprints = get_sprints(conn, project_id)
+        return jsonify({"sprints": [{"sprint_id": s[0], "name": s[1]} for s in sprints]})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/project/task/start', methods=['POST'])
 def start_task():
@@ -521,11 +518,12 @@ def start_task():
     if not task_id:
         return jsonify({"error": "Missing task_id"}), 400
 
-    conn = get_db_connection()
-    sql.update_task_status(conn, task_id, "review")  # In Progress
-    conn.close()
-
-    return jsonify({"message": f"Task {task_id} moved to In Progress."}), 200
+    try:
+        with engine.connect() as conn:
+            update_task_status(conn, task_id, "review")
+        return jsonify({"message": f"Task {task_id} moved to In Progress."}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/project/task/complete', methods=['POST'])
 def complete_task():
@@ -536,11 +534,12 @@ def complete_task():
     if not task_id:
         return jsonify({"error": "Missing task_id"}), 400
 
-    conn = get_db_connection()
-    sql.update_task_status(conn, task_id, "done")  # Completed
-    conn.close()
-
-    return jsonify({"message": f"Task {task_id} marked as Completed."}), 200
+    try:
+        with engine.connect() as conn:
+            update_task_status(conn, task_id, "done")
+        return jsonify({"message": f"Task {task_id} marked as Completed."}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/project/task/reopen', methods=['POST'])
 def reopen_task():
@@ -551,31 +550,31 @@ def reopen_task():
     if not task_id:
         return jsonify({"error": "Missing task_id"}), 400
 
-    conn = get_db_connection()
-    sql.update_task_status(conn, task_id, "pending")  # To Do
-    conn.close()
-
-    return jsonify({"message": f"Task {task_id} reopened to To Do List."}), 200
-
+    try:
+        with engine.connect() as conn:
+            update_task_status(conn, task_id, "pending")
+        return jsonify({"message": f"Task {task_id} reopened to To Do List."}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/project/add_mod/eligible_users', methods=['GET'])
-def get_eligible_users():
+def get_eligible_users_route(): # Renamed to avoid function name conflicts
     """Fetch users eligible for moderator promotion"""
     project_id = request.args.get("project_id")
     if not project_id:
         return jsonify({"error": "Missing project_id"}), 400
 
-    conn = get_db_connection()
-    users = sql.get_eligible_users_for_mod(conn, project_id)
-    conn.close()
-
-    if not users:
-        return jsonify({"message": "No eligible users found"}), 404
-
-    return jsonify({"eligible_users": [{"roll_no": u[0], "name": u[1]} for u in users]}), 200
+    try:
+        with engine.connect() as conn:
+            users = get_eligible_users_for_mod(conn, project_id)
+        if not users:
+            return jsonify({"message": "No eligible users found"}), 404
+        return jsonify({"eligible_users": [{"roll_no": u[0], "name": u[1]} for u in users]}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/project/add_mod/promote', methods=['POST'])
-def promote_moderator():
+def promote_moderator_route(): # Renamed to avoid function name conflicts
     """Promote user to moderator role"""
     data = request.json
     project_id = data.get("project_id")
@@ -584,14 +583,15 @@ def promote_moderator():
     if not project_id or not user_id:
         return jsonify({"error": "Missing project_id or user_id"}), 400
 
-    conn = get_db_connection()
-    sql.promote_to_moderator(conn, project_id, user_id)
-    conn.close()
-
-    return jsonify({"message": f"User {user_id} promoted to Moderator."}), 200
+    try:
+        with engine.connect() as conn:
+            promote_to_moderator(conn, project_id, user_id)
+        return jsonify({"message": f"User {user_id} promoted to Moderator."}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/project/add_mod/demote', methods=['POST'])
-def demote_moderator():
+def demote_moderator_route(): # Renamed to avoid function name conflicts
     """Remove moderator role (Revert to Member)"""
     data = request.json
     project_id = data.get("project_id")
@@ -600,34 +600,61 @@ def demote_moderator():
     if not project_id or not user_id:
         return jsonify({"error": "Missing project_id or user_id"}), 400
 
-    conn = get_db_connection()
-    sql.remove_moderator(conn, project_id, user_id)
-    conn.close()
+    try:
+        with engine.connect() as conn:
+            remove_moderator(conn, project_id, user_id)
+        return jsonify({"message": f"User {user_id} demoted to Member."}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-    return jsonify({"message": f"User {user_id} demoted to Member."}), 200
 
      
 if __name__ == "__main__":
     app.run(debug=True)
 
 
+@app.route("/rate_member", methods=["POST"])
+def rate_member():
+    try:
+        data = request.get_json()
+        rated_by = data.get("rated_by")
+        rated_user = data.get("rated_user")
+        project_id = data.get("project_id")
+        score = data.get("score")
+        comment = data.get("comment", "")
 
-#email notification of things
+        if not all([rated_by, rated_user, project_id, score]):
+            return jsonify({"error": "Missing required fields"}), 400
 
-
-
-       
-
-
-
-         
-
-
-
-
+        success = add_member_rating(rated_by, rated_user, project_id, score, comment)
+        
+        if success:
+            return jsonify({"message": "Rating added successfully"}), 201
+        else:
+            return jsonify({"error": "Failed to add rating"}), 500
+    except Exception as e:
+        print(f"Error in rate_member: {e}")
+        return jsonify({"error": "Internal server error"}), 500
     
-     
-     
-     
 
+@app.route("/rate_project", methods=["POST"])
+def rate_project():
+    try:
+        data = request.get_json()
+        user_id = data.get("user_id")
+        project_id = data.get("project_id")
+        score = data.get("score")
+        comment = data.get("comment", "")
 
+        if not all([user_id, project_id, score]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        success = add_project_rating(user_id, project_id, score, comment)
+
+        if success:
+            return jsonify({"message": "Project rating added successfully"}), 201
+        else:
+            return jsonify({"error": "Failed to add project rating"}), 500
+    except Exception as e:
+        print(f"Error in rate_project: {e}")
+        return jsonify({"error": "Internal server error"}), 500
