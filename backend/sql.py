@@ -952,7 +952,6 @@ LEFT JOIN projectapplication AS pa
        
        #__________PROJECT SQL _____________#
 
-
 def get_project_details(project_id):
     try:
         with engine.connect() as conn:
@@ -968,21 +967,22 @@ def get_project_details(project_id):
                 FROM "Project"
                 WHERE project_id = :project_id
             """)
-            project = conn.execute(project_query, {"project_id": int(project_id)}).fetchone()  # Convert to int
+            project = conn.execute(project_query, {"project_id": int(project_id)}).fetchone()  
 
-            print(f"Fetched project: {project}")  # Debugging
+            #print(f"Fetched project: {project}")  
+
             if not project:
                 return None
 
             project_details = {
-                "description": project["description"],
-                "title": project["title"],
-                "start_date": project["start_date"].isoformat() if project["start_date"] else None,
-                "end_date": project["end_date"].isoformat() if project["end_date"] else None,
-                "project_size": project["members_required"],
-                "project_type": project["status"],
+                "description": project[0],  
+                "title": project[1],
+                "start_date": project[2].isoformat() if project[2] else None,
+                "end_date": project[3].isoformat() if project[3] else None,
+                "project_size": project[4],
+                "project_type": project[5],
                 "github_link": None,
-                "tech_stack": project["tags"] if project["tags"] else [],
+                "tech_stack": project[6] if project[6] else [],
                 "team_members": []
             }
 
@@ -993,56 +993,75 @@ def get_project_details(project_id):
                 WHERE pm.project_id = :project_id
             """)
             members = conn.execute(members_query, {"project_id": project_id}).fetchall()
-            project_details["team_members"] = [member["name"] for member in members]
+
+            project_details["team_members"] = [member[0] for member in members]  #
 
         return project_details
     except Exception as e:
         print(f"Error in get_project_details: {e}")
         return None
 
+
 def get_project_analytics(project_id):
     try:
+        project_id = int(project_id)  
+        #print(f"Fetching analytics for project_id: {project_id}") 
+
         with engine.connect() as conn:
+            # Fetch project start_date and end_date
             proj_query = text("""
                 SELECT start_date, end_date
                 FROM "Project"
                 WHERE project_id = :project_id
             """)
-            project = conn.execute(proj_query, {"project_id": project_id}).fetchone()
+            project = conn.execute(proj_query, {"project_id": project_id}).mappings().fetchone()
+            
             if not project:
+                print(f"Project {project_id} not found")
                 return None
 
+            # Fetch tasks
             tasks_query = text("""
                 SELECT sprint_number, status, points
                 FROM task
                 WHERE project_id = :project_id
             """)
-            tasks = conn.execute(tasks_query, {"project_id": project_id}).fetchall()
-
+            tasks = conn.execute(tasks_query, {"project_id": project_id}).mappings().all()
+            
+            # Calculate task stats
             total_tasks = len(tasks)
             completed_tasks = [t for t in tasks if t["status"] == "done"]
             total_completed = len(completed_tasks)
-            percentage_completed = (total_completed / total_tasks * 100) if total_tasks else 0
+            percentage_completed = (total_completed / total_tasks * 100) if total_tasks > 0 else 0
 
+            # Sprint analysis
             sprint_numbers = [t["sprint_number"] for t in tasks if t["sprint_number"] is not None]
             latest_sprint = max(sprint_numbers, default=None)
-            sprint_velocity = sum(t["points"] for t in tasks 
-                                  if t["sprint_number"] == latest_sprint and t["status"] == "done") if latest_sprint is not None else 0
+            sprint_velocity = (
+                sum(t["points"] for t in tasks if t["sprint_number"] == latest_sprint and t["status"] == "done")
+                if latest_sprint is not None else 0
+            )
 
+            # Team size
             team_query = text("""
                 SELECT COUNT(*) as team_count
                 FROM projectmembers
                 WHERE project_id = :project_id
             """)
-            team_count = conn.execute(team_query, {"project_id": project_id}).fetchone()["team_count"]
-            total_completed_points = sum(t["points"] for t in tasks if t["status"] == "done")
-            team_efficiency = total_completed_points / team_count if team_count else 0
+            team_result = conn.execute(team_query, {"project_id": project_id}).mappings().fetchone()
+            team_count = team_result["team_count"] if team_result else 0  
 
+            # Team efficiency 
+            total_completed_points = sum(t["points"] for t in tasks if t["status"] == "done")
+            team_efficiency = total_completed_points / team_count if team_count > 0 else 0
+
+            # Pending days calculation
             pending_days = 0
             if project["end_date"]:
                 delta = project["end_date"] - date.today()
-                pending_days = delta.days if delta.days > 0 else 0
+                pending_days = max(delta.days, 0)  
 
+            # Sprint burndown chart
             sprint_data = {}
             for t in tasks:
                 sprint = t["sprint_number"] or 0
@@ -1052,109 +1071,207 @@ def get_project_analytics(project_id):
                 if t["status"] == "done":
                     sprint_data[sprint]["completed"] += t["points"]
 
-            burndown_data = []
-            velocity_trend = []
-            for sprint in sorted(sprint_data.keys()):
-                data = sprint_data[sprint]
-                burndown_data.append({
+            burndown_data = [
+                {
                     "sprint_number": sprint,
                     "planned_points": data["planned"],
                     "completed_points": data["completed"]
-                })
-                velocity_trend.append({
-                    "sprint_number": sprint,
-                    "velocity": data["completed"]
-                })
+                }
+                for sprint, data in sorted(sprint_data.items())
+            ]
 
+            velocity_trend = [
+                {"sprint_number": sprint, "velocity": data["completed"]}
+                for sprint, data in sorted(sprint_data.items())
+            ]
+
+            
             performance_query = text("""
-                SELECT t.assigned_to, COUNT(*) as total_tasks, 
-                       SUM(CASE WHEN t.status = 'done' THEN 1 ELSE 0 END) as done_tasks
+                SELECT t.assigned_to::TEXT, COUNT(*) as total_tasks, 
+                    SUM(CASE WHEN t.status = 'done' THEN 1 ELSE 0 END) as done_tasks
                 FROM task t
                 WHERE t.project_id = :project_id
-                GROUP BY t.assigned_to
+                GROUP BY t.assigned_to::TEXT
             """)
-            performance = conn.execute(performance_query, {"project_id": project_id}).fetchall()
+            performance = conn.execute(performance_query, {"project_id": project_id}).mappings().all()
 
             team_performance = []
             for p in performance:
-                name_query = text("""
-                    SELECT name FROM "User" WHERE roll_no = :roll_no
-                """)
-                user = conn.execute(name_query, {"roll_no": p["assigned_to"]}).fetchone()
+                name_query = text("SELECT name FROM \"User\" WHERE roll_no = :roll_no")
+                user = conn.execute(name_query, {"roll_no": p["assigned_to"]}).mappings().fetchone()
+                member_name = user["name"] if user else p["assigned_to"]
+                
+                completion_rate = (p["done_tasks"] / p["total_tasks"] * 100) if p["total_tasks"] > 0 else 0
                 team_performance.append({
-                    "member": user["name"] if user else p["assigned_to"],
+                    "member": member_name,
                     "done_tasks": p["done_tasks"],
                     "total_tasks": p["total_tasks"],
-                    "completion_rate": (p["done_tasks"] / p["total_tasks"] * 100) if p["total_tasks"] else 0
+                    "completion_rate": round(completion_rate, 2)  
                 })
 
+            summary = {
+                "total_tasks": total_tasks,
+                "completed_tasks": total_completed,
+                "total_points": sum(t["points"] for t in tasks),
+                "completed_points": total_completed_points,
+                "team_size": team_count
+            }
+
             analytics = {
-                "percentage_completed": percentage_completed,
+                "percentage_completed": round(percentage_completed, 2),
                 "sprint_velocity": sprint_velocity,
-                "team_efficiency": team_efficiency,
+                "team_efficiency": round(team_efficiency, 2),
                 "pending_days": pending_days,
                 "burndown_data": burndown_data,
                 "velocity_trend": velocity_trend,
-                "team_performance": team_performance
+                "team_performance": team_performance,
+                "summary": summary  
             }
+
+            print(f"Analytics generated for project {project_id}")
             return analytics
+
     except Exception as e:
         print(f"Error in get_project_analytics: {e}")
+        import traceback
+        traceback.print_exc()  
         return None
 
-def get_sprint_tasks(project_id):
+
+def add_task(project_id, sprint_number, description, assigned_to, points):
+    """Insert a new task into the 'task' table."""
     try:
         with engine.connect() as conn:
+            conn.execute(text("""
+                INSERT INTO task (project_id, sprint_number, description, assigned_to, status, points)
+                VALUES (:project_id, :sprint_number, :description, :assigned_to, 'pending', :points)
+            """), {
+                "project_id": project_id,
+                "sprint_number": sprint_number,
+                "description": description,
+                "assigned_to": assigned_to,
+                "points": points
+            })
+            conn.commit()
+        return True, "Task added successfully"
+    except Exception as e:
+        print(f"Error adding task: {e}")
+        return False, str(e)
+ 
+def get_sprint_tasks(project_id):
+    try:
+        project_id = int(project_id)  
+        
+        with engine.connect() as conn:
+            project_check = text("""
+                SELECT project_id FROM "Project" 
+                WHERE project_id = :project_id
+            """)
+            project = conn.execute(project_check, {"project_id": project_id}).mappings().fetchone()
+            if not project:
+                print(f"Project {project_id} not found")
+                return None
+            
             sprint_query = text("""
-                SELECT DISTINCT sprint_number, 
-                    (SELECT COUNT(*) FROM task t2 WHERE t2.project_id = :project_id AND t2.sprint_number = t.sprint_number) AS total_tasks,
-                    (SELECT COUNT(*) FROM task t2 WHERE t2.project_id = :project_id AND t2.sprint_number = t.sprint_number AND t2.status = 'done') AS completed_tasks
+                SELECT DISTINCT sprint_number,
+                (SELECT COUNT(*) FROM task t2 WHERE t2.project_id = :project_id AND t2.sprint_number = t.sprint_number) AS total_tasks,
+                (SELECT COUNT(*) FROM task t2 WHERE t2.project_id = :project_id AND t2.sprint_number = t.sprint_number AND t2.status = 'done') AS completed_tasks
                 FROM task t
-                WHERE t.project_id = :project_id
+                WHERE t.project_id = :project_id AND t.sprint_number IS NOT NULL
                 ORDER BY sprint_number
             """)
-            sprints = conn.execute(sprint_query, {"project_id": project_id}).fetchall()
-
+            sprints = conn.execute(sprint_query, {"project_id": project_id}).mappings().all()
+            
+            if not sprints:
+                unassigned_check = text("""
+                    SELECT COUNT(*) as count FROM task 
+                    WHERE project_id = :project_id
+                """)
+                unassigned = conn.execute(unassigned_check, {"project_id": project_id}).mappings().fetchone()
+                if unassigned and unassigned["count"] > 0:
+                    sprints = [{
+                        "sprint_number": None,
+                        "total_tasks": unassigned["count"],
+                        "completed_tasks": 0
+                    }]
+            
             sprint_data = []
+            
+            column_check = text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'task' AND column_name = 'title'
+            """)
+            title_exists = conn.execute(column_check).fetchone() is not None
+            
             for sprint in sprints:
                 sprint_number = sprint["sprint_number"]
-
-                task_query = text("""
-                    SELECT id, title, description, assigned_to, points, status
+                
+                task_query = text(f"""
+                    SELECT id, description, assigned_to, points, status
+                    {', title' if title_exists else ''}
                     FROM task
-                    WHERE project_id = :project_id AND sprint_number = :sprint_number
+                    WHERE project_id = :project_id 
+                      AND (sprint_number = :sprint_number OR (:sprint_number IS NULL AND sprint_number IS NULL))
                     ORDER BY status
                 """)
-                tasks = conn.execute(task_query, {"project_id": project_id, "sprint_number": sprint_number}).fetchall()
-
+                tasks = conn.execute(task_query, {"project_id": project_id, "sprint_number": sprint_number}).mappings().all()
+                
                 categorized_tasks = {"todo": [], "in_progress": [], "completed": []}
+                completed_count = 0
+                
                 for task in tasks:
+                    assignee_name = None
+                    if task["assigned_to"]:
+                        name_query = text("SELECT name FROM \"User\" WHERE roll_no = :roll_no")
+                        user = conn.execute(name_query, {"roll_no": task["assigned_to"]}).mappings().fetchone()
+                        assignee_name = user["name"] if user else task["assigned_to"]
+                    
                     task_data = {
                         "id": task["id"],
-                        "title": task["title"],
                         "description": task["description"],
                         "assigned_to": task["assigned_to"],
-                        "points": task["points"]
+                        "assignee_name": assignee_name,
+                        "points": task["points"],
                     }
-                    if task["status"] == "pending":
+                    if title_exists:
+                        task_data["title"] = task["title"]
+                    
+                    status = task["status"].lower() if task["status"] else "pending"
+                    if status in ["pending", "todo"]:
                         categorized_tasks["todo"].append(task_data)
-                    elif task["status"] == "review":
+                    elif status in ["review", "in_progress", "progress"]:
                         categorized_tasks["in_progress"].append(task_data)
-                    elif task["status"] == "done":
+                    elif status in ["done", "completed"]:
                         categorized_tasks["completed"].append(task_data)
-
+                        completed_count += 1
+                    else:
+                        categorized_tasks["todo"].append(task_data)
+                
+                if sprint_number is None:
+                    sprint["completed_tasks"] = completed_count
+                
+                total = int(sprint["total_tasks"])
+                completed = int(sprint["completed_tasks"])
+                completion_percentage = (completed / total * 100) if total > 0 else 0
+                
                 sprint_data.append({
                     "sprint_number": sprint_number,
-                    "total_tasks": sprint["total_tasks"],
-                    "completed_tasks": sprint["completed_tasks"],
+                    "sprint_name": f"Sprint {sprint_number}" if sprint_number is not None else "Unassigned Tasks",
+                    "total_tasks": total,
+                    "completed_tasks": completed,
+                    "completion_percentage": round(completion_percentage, 2),
                     "tasks": categorized_tasks
                 })
-
+            
             return sprint_data
+            
     except Exception as e:
         print(f"Error in get_sprint_tasks: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
+    
 def add_task(project_id, sprint_number, description, assigned_to, points):
     try:
         with engine.connect() as conn:
@@ -1168,19 +1285,40 @@ def add_task(project_id, sprint_number, description, assigned_to, points):
         print(f"Error adding task: {e}")
         return False
 
-def update_task(task_id, description, assigned_to, status, points):
+def get_sprints(project_id):  
+    with engine.connect() as conn:  
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT sprint_id, name FROM sprint
+                WHERE project_id = %s
+                ORDER BY sprint_id
+            """, (project_id,))
+            return cur.fetchall()
+
+
+def update_task(task_id, **updates):
+    """Updates only the provided fields for a given task_id."""
+    if not updates:
+        print("No fields to update")
+        return False  
+
     try:
+        set_clause = ", ".join([f"{key} = :{key}" for key in updates.keys()])
+        updates["task_id"] = task_id  
         with engine.connect() as conn:
-            conn.execute(text("""
+            conn.execute(text(f"""
                 UPDATE task 
-                SET description = :description, assigned_to = :assigned_to, status = :status, points = :points
+                SET {set_clause}
                 WHERE id = :task_id
-            """), {"description": description, "assigned_to": assigned_to, "status": status, "points": points, "task_id": task_id})
+            """), updates)
             conn.commit()
+
         return True
+
     except Exception as e:
         print(f"Error updating task: {e}")
         return False
+
 
 def update_task_status(task_id, new_status):
     try:
@@ -1194,45 +1332,76 @@ def update_task_status(task_id, new_status):
         print(f"Error updating task status: {e}")
         return False
 
+
 def get_eligible_users_for_mod(project_id):
     try:
         with engine.connect() as conn:
             users = conn.execute(text("""
-                SELECT u.roll_no, u.name 
-                FROM "User" u
-                JOIN project_member pm ON u.roll_no = pm.user_id
+                SELECT member_id, name 
+                FROM projectmembers pm
+                JOIN "User" u ON pm.member_id = u.roll_no
                 WHERE pm.project_id = :project_id 
-                AND pm.role NOT IN ('admin', 'moderator', 'mentor')
+                AND pm.role NOT IN ('admin', 'moderator')
             """), {"project_id": project_id}).fetchall()
+            
             return users
+
     except Exception as e:
         print(f"Error getting eligible users: {e}")
         return None
 
-def promote_to_moderator(project_id, user_id):
+
+def promote_to_moderator(conn, project_id, user_id):
     try:
-        with engine.connect() as conn:
+        with conn.begin():
+            # Fetch the current role of the user
+            result = conn.execute(text("""
+                SELECT role FROM projectmembers
+                WHERE project_id = :project_id AND member_id = :user_id
+            """), {"project_id": project_id, "user_id": user_id}).fetchone()
+
+            # If no record is found, the user is not in the project
+            if not result:
+                return False, "User is not a member of this project."
+
+            current_role = result[0]
+
+            # If the user is already a mod or admin, prevent the update
+            if current_role in ["moderator", "admin"]:
+                return False, f"User is already a {current_role}."
+
+            # Promote user to moderator
             conn.execute(text("""
-                UPDATE project_member
+                UPDATE projectmembers
                 SET role = 'moderator'
-                WHERE project_id = :project_id AND user_id = :user_id
+                WHERE project_id = :project_id AND member_id = :user_id
             """), {"project_id": project_id, "user_id": user_id})
-            conn.commit()
-        return True
+
+            return True, f"User {user_id} promoted to Moderator."
+
     except Exception as e:
         print(f"Error promoting user: {e}")
-        return False
+        return False, "Database error occurred."
 
 def remove_moderator(project_id, user_id):
     try:
-        with engine.connect() as conn:
-            conn.execute(text("""
-                UPDATE project_member
+        with engine.begin() as conn:  
+            result = conn.execute(text("""
+                UPDATE projectmembers
                 SET role = 'member'
-                WHERE project_id = :project_id AND user_id = :user_id AND role = 'moderator'
+                WHERE project_id = :project_id 
+                AND member_id = :user_id 
+                AND role = 'moderator'
+                RETURNING member_id;
             """), {"project_id": project_id, "user_id": user_id})
-            conn.commit()
-        return True
+
+            updated_user = result.fetchone() 
+
+            if updated_user:
+                return True  
+            else:
+                return False  
+
     except Exception as e:
         print(f"Error demoting user: {e}")
         return False
@@ -1282,14 +1451,36 @@ def is_valid_member(project_id, user_id):
         print(f"Error checking membership: {e}")
         return False
 
-def add_project_rating(user_id, project_id, score, comment):
+def is_team_member(user_id, project_id):
+    """Check if the user is a member of the project"""
     try:
+        query = text("""
+            SELECT 1 FROM projectmembers 
+            WHERE member_id = :user_id AND project_id = :project_id
+        """)
         with engine.connect() as conn:
-            conn.execute(text("""
-                INSERT INTO projectrating (user_id, project_id, score, comment)
-                VALUES (:user_id, :project_id, :score, :comment)
-            """), {"user_id": user_id, "project_id": project_id, "score": score, "comment": comment})
-            conn.commit()
+            result = conn.execute(query, {"user_id": user_id, "project_id": project_id}).fetchone()
+            print(f"DEBUG: is_team_member check for {user_id} in project {project_id}: {result}")
+            return result is not None  
+    except Exception as e:
+        print(f"Error checking team membership: {e}")
+        return True  
+
+def add_project_rating(user_id, project_id, score, comment):
+    """Insert a project rating if the user is NOT a project member"""
+    if is_team_member(user_id, project_id):
+        print(f"User {user_id} is a team member of project {project_id}, cannot rate.")
+        return False  
+
+    try:
+        query = text("""
+            INSERT INTO projectrating (user_id, project_id, score, comment)
+            VALUES (:user_id, :project_id, :score, :comment)
+        """)
+        with engine.begin() as conn:  
+            conn.execute(query, {"user_id": user_id, "project_id": project_id, "score": score, "comment": comment})
+
+        print(f"User {user_id} successfully rated project {project_id} with score {score}.")
         return True
     except Exception as e:
         print(f"Error adding project rating: {e}")
