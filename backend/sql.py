@@ -1004,8 +1004,7 @@ def get_project_details(project_id):
 
 def get_project_analytics(project_id):
     try:
-        project_id = int(project_id)  
-        #print(f"Fetching analytics for project_id: {project_id}") 
+        project_id = int(project_id)
 
         with engine.connect() as conn:
             # Fetch project start_date and end_date
@@ -1019,6 +1018,25 @@ def get_project_analytics(project_id):
             if not project:
                 print(f"Project {project_id} not found")
                 return None
+
+            # Fetch sprint start and end dates
+            sprint_query = text("""
+                SELECT sprint_id, name, start_date, end_date
+                FROM sprint
+                WHERE project_id = :project_id
+                ORDER BY sprint_id
+            """)
+            sprints = conn.execute(sprint_query, {"project_id": project_id}).mappings().all()
+
+            sprint_data = [
+                {
+                    "sprint_id": s["sprint_id"],
+                    "name": s["name"],
+                    "start_date": s["start_date"],
+                    "end_date": s["end_date"]
+                }
+                for s in sprints
+            ]
 
             # Fetch tasks
             tasks_query = text("""
@@ -1062,14 +1080,14 @@ def get_project_analytics(project_id):
                 pending_days = max(delta.days, 0)  
 
             # Sprint burndown chart
-            sprint_data = {}
+            sprint_progress = {}
             for t in tasks:
                 sprint = t["sprint_number"] or 0
-                if sprint not in sprint_data:
-                    sprint_data[sprint] = {"planned": 0, "completed": 0}
-                sprint_data[sprint]["planned"] += t["points"]
+                if sprint not in sprint_progress:
+                    sprint_progress[sprint] = {"planned": 0, "completed": 0}
+                sprint_progress[sprint]["planned"] += t["points"]
                 if t["status"] == "done":
-                    sprint_data[sprint]["completed"] += t["points"]
+                    sprint_progress[sprint]["completed"] += t["points"]
 
             burndown_data = [
                 {
@@ -1077,15 +1095,15 @@ def get_project_analytics(project_id):
                     "planned_points": data["planned"],
                     "completed_points": data["completed"]
                 }
-                for sprint, data in sorted(sprint_data.items())
+                for sprint, data in sorted(sprint_progress.items())
             ]
 
             velocity_trend = [
                 {"sprint_number": sprint, "velocity": data["completed"]}
-                for sprint, data in sorted(sprint_data.items())
+                for sprint, data in sorted(sprint_progress.items())
             ]
 
-            
+            # Team performance
             performance_query = text("""
                 SELECT t.assigned_to::TEXT, COUNT(*) as total_tasks, 
                     SUM(CASE WHEN t.status = 'done' THEN 1 ELSE 0 END) as done_tasks
@@ -1118,6 +1136,9 @@ def get_project_analytics(project_id):
             }
 
             analytics = {
+                "project_start_date": project["start_date"],
+                "project_end_date": project["end_date"],
+                "sprints": sprint_data,
                 "percentage_completed": round(percentage_completed, 2),
                 "sprint_velocity": sprint_velocity,
                 "team_efficiency": round(team_efficiency, 2),
@@ -1136,7 +1157,6 @@ def get_project_analytics(project_id):
         import traceback
         traceback.print_exc()  
         return None
-
 
 def add_task(project_id, sprint_number, description, assigned_to, points):
     """Insert a new task into the 'task' table."""
