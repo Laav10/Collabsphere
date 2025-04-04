@@ -134,7 +134,7 @@ def verify():
            # Add to Firestore
             print("success")
             print("ds")
-            response = make_response(jsonify({"user_verified": True, "message": "cookie set","roll_no":roll_no}))
+            response = make_response(jsonify({"user_verified": True, "message": "cookie set","roll_no":data['roll_no']}))
             response.set_cookie(
             "fingerprint", fingerprint, 
          
