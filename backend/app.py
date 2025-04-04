@@ -154,7 +154,7 @@ def verify():
             max_age=60*60*24*3,  # 7 days expiration
             
             )
-            user_insert_google_sql(data)
+         #   user_insert_google_sql(data)
 
            # print(response.headers)
             return response
