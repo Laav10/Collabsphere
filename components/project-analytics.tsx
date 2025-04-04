@@ -47,7 +47,7 @@ const teamData = [
 ]
 
 interface ProjectAnalyticsProps {
-  projectId: string
+  projectId: number
 }
 
 export default function ProjectAnalytics({ projectId }: ProjectAnalyticsProps) {

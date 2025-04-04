@@ -11,7 +11,7 @@ import { useState, useEffect } from "react";
  //in this call the api  give project_id  , user_id (from usercontext )   
 export default function ProjectPage() {
   const params = useParams();
- const project_id = params?.id as string;
+ const project_id = params?.id as number;
   
   if(!project_id) {
       return (

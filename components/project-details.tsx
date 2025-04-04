@@ -21,7 +21,7 @@ interface ProjectDetails {
   tech_stack: string[];       
 }
 // isme admin  
-const fetchProjectDetails = async(project_id: string ) => {
+const fetchProjectDetails = async(project_id: number ) => {
   try {
     const response = await fetch(`http://127.0.0.1:5000/project/view_details?project_id=${project_id}`, {
       method: "GET",
@@ -44,7 +44,7 @@ const fetchProjectDetails = async(project_id: string ) => {
   }
 }
 
-export default function ProjectDetails({ project_id }: { project_id: string }) {
+export default function ProjectDetails({ project_id }: { project_id: number }) {
 
   
     const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
