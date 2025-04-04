@@ -321,10 +321,9 @@ def list_users_sql():
                     "User" u
                 LEFT JOIN 
                     "projectmembers" p ON u.roll_no = p.member_id
-                JOIN 
+                left JOIN 
                     "Project" pa ON p.project_id = pa.project_id
-                WHERE 
-                    pa.status = 'Completed'
+               
                 GROUP BY 
                     u.roll_no
             """)
