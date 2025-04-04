@@ -16,9 +16,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className={cn(inter.className, "min-h-screen bg-black")}>
         <UserProvider>
-          <ToastProvider>
             {children}
-          </ToastProvider>
         </UserProvider>
       </body>
     </html>

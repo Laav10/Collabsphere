@@ -1,9 +1,9 @@
 'use client'
+
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 
 interface User {
   id: string;
-  email: string;
 }
 
 interface UserContextType {
@@ -14,13 +14,23 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState(() => {
-    const storedUser = localStorage.getItem('user');
-    return storedUser ? JSON.parse(storedUser) : null;
-  });
+  const [user, setUser] = useState<User | null>(null);
 
+  // Load user from localStorage after the component mounts (client-side only)
   useEffect(() => {
-    localStorage.setItem('user', JSON.stringify(user));
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
+
+  // Save user to localStorage when it changes
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('user');
+    }
   }, [user]);
 
   return (

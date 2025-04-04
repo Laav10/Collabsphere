@@ -48,7 +48,8 @@ export default function ProjectsPage() {
         })
 
         if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`)
+         console.error("Error:", response.status);
+          throw new Error(`HTTP error! Status: ${response.status}`) 
         }
 
         const data = await response.json()

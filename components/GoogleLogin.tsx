@@ -58,8 +58,7 @@ const GoogleLogin = () => {
       if (response.ok) {
         // Update UserContext with user data
         setUser({
-          id: uid,
-          email: user_email
+          id: data.roll_no
         });
         router.push("/dashboard");
       }
@@ -70,8 +69,9 @@ const GoogleLogin = () => {
 
   const handleLogin = async () => {
     try {
-      const result = await signInWithPopup(auth, provider.setCustomParameters({ prompt: "select_account" }));
-      const user = result.user;
+      provider.setCustomParameters({ prompt: "select_account" }); // ✅ Set it first
+      const result = await signInWithPopup(auth, provider);
+        const user = result.user;
       const email = user.email;
 
       if (email?.endsWith("iiitkottayam.ac.in")) {
@@ -102,8 +102,8 @@ const GoogleLogin = () => {
       if (response.ok) {
         // Update UserContext with user data
         setUser({
-          id: uid,
-          email: email || ""
+          id: data.roll_no,
+         
         });
         router.push("/dashboard");
       }
