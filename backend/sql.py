@@ -25,6 +25,15 @@ def decrypt_message(encrypted_message, secret_key):
     cipher = AES.new(secret_key, AES.MODE_GCM, nonce=nonce)
     return cipher.decrypt_and_verify(ciphertext, tag).decode()
 
+def is_admin_or_mod(user_id, project_id):
+    """Check if a user is an admin or moderator of a project."""
+    with engine.connect() as conn:
+        result = conn.execute(text("""
+            SELECT 1 FROM projectmembers
+            WHERE member_id = :user_id AND project_id = :project_id AND role IN ('admin', 'moderator')
+        """), {"user_id": user_id, "project_id": project_id}).fetchone()
+        return result is not None
+
 def user_insert_google_sql(data):
 
     try:
@@ -56,8 +65,6 @@ def  insert_message(message):
 
      decrypt_message(encrypted_msg, aes_key)
      print(decrypt_message(encrypted_msg, aes_key), "decrypted")
-
-
 
 def  fetch_message(message):
  with engine.connect() as conn:
@@ -1291,6 +1298,16 @@ def get_sprint_tasks(project_id):
         traceback.print_exc()
         return None
 
+def get_sprint_status(project_id, sprint_number):
+    """Fetch the status of a given sprint."""
+    with engine.connect() as conn:
+        result = conn.execute(text("""
+            SELECT status FROM sprint 
+            WHERE project_id = :project_id AND sprint_id = :sprint_number
+        """), {"project_id": project_id, "sprint_number": sprint_number}).fetchone()
+        
+        return result[0] if result else None 
+
     
 def add_task(project_id, sprint_number, description, assigned_to, points):
     try:
@@ -1305,15 +1322,18 @@ def add_task(project_id, sprint_number, description, assigned_to, points):
         print(f"Error adding task: {e}")
         return False
 
-def get_sprints(project_id):  
-    with engine.connect() as conn:  
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT sprint_id, name FROM sprint
-                WHERE project_id = %s
+def get_sprints(project_id):
+    try:
+        with engine.connect() as conn:
+            sprints = conn.execute(text("""
+                SELECT sprint_id, name, start_date, end_date, status FROM sprint
+                WHERE project_id = :project_id
                 ORDER BY sprint_id
-            """, (project_id,))
-            return cur.fetchall()
+            """),{"project_id": project_id}).fetchall()
+            return sprints
+    except Exception as e:
+        print(f"Error getting sprints: {e}")
+        return None
 
 
 def update_task(task_id, **updates):
@@ -1426,20 +1446,6 @@ def remove_moderator(project_id, user_id):
         print(f"Error demoting user: {e}")
         return False
 
-def get_sprints(project_id):
-    try:
-        with engine.connect() as conn:
-            sprints = conn.execute(text("""
-                SELECT sprint_id, name FROM sprint
-                WHERE project_id = :project_id
-                ORDER BY sprint_id
-            """),{"project_id": project_id}).fetchall()
-            return sprints
-    except Exception as e:
-        print(f"Error getting sprints: {e}")
-        return None
-    
-
 def add_member_rating(rated_by, rated_user, project_id, score, comment):
     try:
         with engine.connect() as conn:
@@ -1506,19 +1512,37 @@ def add_project_rating(user_id, project_id, score, comment):
         print(f"Error adding project rating: {e}")
         return False
 
+def get_last_sprint_status(project_id):
+    """Fetch the latest sprint's status."""
+    with engine.connect() as conn:
+        result = conn.execute(text("""
+            SELECT status FROM sprint
+            WHERE project_id = :project_id
+            ORDER BY sprint_id DESC LIMIT 1
+        """), {"project_id": project_id}).fetchone()
+        return result[0] if result else "closed"
+
+def create_sprint(user_id, project_id, name, start_date, end_date):
+    """Create a new sprint only if the previous one is completed and the user is an admin/mod."""
+    if not is_admin_or_mod(user_id, project_id):  
+        return {"error": "Only an admin or mod can create a sprint."}, 403
+
+    last_sprint_status = get_last_sprint_status(project_id)
+    if last_sprint_status != "closed":
+        return {"error": "Previous sprint must be completed before creating a new one."}, 400
+
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("""
+                INSERT INTO sprint (project_id, name, start_date, end_date, status)
+                VALUES (:project_id, :name, :start_date, :end_date, 'open')
+            """), {"project_id": project_id, "name": name, "start_date": start_date, "end_date": end_date})
+        return {"message": "Sprint created successfully."}, 201
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
 
 
-       
-       
-
-
-     
-
-
-
-
-
-  
      
 
     

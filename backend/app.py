@@ -43,7 +43,7 @@ def has_project_access(user_id, project_id):
         if project_ref.exists:
             project_data = project_ref.to_dict()
             return user_id in project_data.get("admins", []) or \
-                   user_id in project_data.get("mods", []) or \
+                   user_id in project_data.get("moderators", []) or \
                    user_id in project_data.get("mentors", [])
         return False
     except Exception as e:
@@ -489,16 +489,18 @@ def view_sprint_tasks():
 def get_sprints_route():
     """API endpoint to fetch sprints for a given project."""
     project_id = request.args.get("project_id")
-
+    
     if not project_id:
         return jsonify({"error": "Missing required parameter: project_id"}), 400
 
     try:
         sprints = get_sprints(project_id)  
-        return jsonify({"sprints": [{"sprint_id": s[0], "name": s[1]} for s in sprints]}), 200
+        return jsonify({"sprints": [{"sprint_id": s[0], "name": s[1], "Start": s[2], "End": s[3], "Status": s[4]} for s in sprints]}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 #5
 #Mapping Frontend to Backend
@@ -524,6 +526,11 @@ def add_task_route():
 
     if not has_project_access(user_id, project_id): 
         return jsonify({"error": "Unauthorized"}), 403
+    
+    # **Check if Sprint is Open**
+    sprint_status = get_sprint_status(project_id, sprint_number)
+    if sprint_status != "open":
+        return jsonify({"error": "Cannot add task. Sprint is not open."}), 400
 
     if status in STATUS_MAPPING:
         status = STATUS_MAPPING[status]
@@ -576,9 +583,7 @@ def update_task_route():
     except Exception as e:
         print(f"Database Error: {str(e)}")  
         return jsonify({"error": str(e)}), 500
-
-
-
+    
 #7
 @app.route('/project/task/start', methods=['POST'])
 def start_task():
@@ -762,6 +767,24 @@ def rate_project():
     except Exception as e:
         print(f"Error in rate_project: {e}")
         return jsonify({"error": "Internal server error"}), 500
+    
+#15 
+@app.route('/project/create_sprint', methods=['POST'])
+def create_sprint_route():
+    """API endpoint to create a sprint."""
+    data = request.get_json()
+    user_id = data.get("user_id")  # Must be passed in the request body for now
+    project_id = data.get("project_id")
+    name = data.get("name")
+    start_date = data.get("start_date")
+    end_date = data.get("end_date")
+
+    if not all([user_id, project_id, name, start_date, end_date]):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    return jsonify(create_sprint(user_id, project_id, name, start_date, end_date))
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)
