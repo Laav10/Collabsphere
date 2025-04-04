@@ -2,13 +2,29 @@ from sqlalchemy import create_engine,text
 import psycopg2
 from flask import Flask, request, jsonify
 import binascii
-
-
-engine = create_engine('postgresql+psycopg2://postgres:Karn1234@localhost:5432/postgres', echo=True)
+#engine = create_engine('postgresql+psycopg2://postgres:Karn1234@localhost:5432/postgres', echo=True)
+engine = create_engine('postgresql://neondb_owner:npg_in9MJCT7Dzqu@ep-twilight-poetry-a1ynwudg-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require', echo=True)
 
 from Crypto.Cipher import AES
 import os
 import base64
+
+def insert():
+    # Insert user data into the database
+    with engine.connect() as conn:
+        query = text("""
+            INSERT INTO "User" (roll_no, name, email)
+            VALUES (:roll_no, :name, :email)
+        """)
+        conn.execute(query, {
+            "roll_no": "sds",
+            "name":"Adi",
+            "email": "wwd"
+        })
+        conn.commit()  # Commit the transaction
+        return jsonify({"project":"added"})
+
+
 
 def encrypt_message(message, secret_key):
     cipher = AES.new(secret_key, AES.MODE_GCM)  # Use AES-GCM mode
@@ -29,8 +45,18 @@ def user_insert_google_sql(data):
     try:
         # Connect to the database
         with engine.connect() as conn:
+            RESULT1=conn.execute(text("""select * from "User" where roll_no=:val1"""),{
+
+              "val1":data['roll_no']
+
+
+            })
+
+            if(RESULT1.rowcount>0):
+                return jsonify({"user":"already exist"}), 401
+
             query = text("""INSERT INTO "User" (roll_no, name,email) VALUES (:roll_no, :name,:email)""")
-            conn.execute(query, {"roll_no": 11, "name": data['user_name'],"email":data['email']})
+            conn.execute(query, {"roll_no":data["roll_no"], "name": data['user_name'],"email":data['email']})
             conn.commit()  # Commit the transaction
         return  jsonify({"user":"registered successfully"})
     except Exception as e:
@@ -137,13 +163,45 @@ VALUES (:val1, :val2, :val3)
      except Exception as e: 
          return jsonify({"error": str(e)}), 500 
 def ranking():
+      #changes for new db rating to project rating
+    with engine.connect() as conn:
+        result=conn.execute(text("""SELECT 
+    p.project_id, 
+    p.title, 
+    AVG(r.score)*0.7+0.3 * COUNT(r.comment) AS score
+    FROM 
+                               
+    projectrating r
+    JOIN 
+    "Project" p ON r.project_id = p.project_id
+    GROUP BY  
+    p.project_id, 
+    p.title
+    ORDER BY 
+    score DESC;
+    """))
+        conn.commit()
+        
+        rows=result.fetchall()
+       
+        data = [
+    {"project_id": row[0], "title": row[1], "score": row[2]}
+    for row in rows
+]
+        
+        #print(data)
+        return jsonify({"project": data})
+    
+def rankings():
+      #changes for new db rating to project rating
     with engine.connect() as conn:
         result=conn.execute(text("""SELECT 
     p.project_id, 
     p.title, 
     AVG(r.rating_value)*0.7+0.3 * COUNT(r.review) AS score
     FROM 
-    Rating r
+                               
+    projectrating r
     JOIN 
     "Project" p ON r.project_id = p.project_id
     GROUP BY  
@@ -198,7 +256,8 @@ def profile_views(data):
         "role_type": row[6],  
         "rating": row[7]  ,
         "email_update": row[8],
-        "project_update": row[9]
+        "project_update": row[9],
+        "name":row[10]
     }
     for row in rows
 ]
@@ -928,7 +987,7 @@ def list_myprojects_sql(data):
     CASE 
         WHEN pa.status = 'Pending' THEN 'Applied'
         WHEN p.status IN ('Completed') THEN 'Completed'
-        wHEN p.status='Active'  THEN 'Active'
+        WHEN p.status IN ('Planning','Active')  THEN 'Active'
         
         ELSE 'Apply Now'
     END AS status
@@ -977,9 +1036,12 @@ def notification_sql(data):
  with engine.connect() as conn:
     result = conn.execute(text("""
     SELECT * 
-    FROM projectapplication 
-    WHERE user_id = :user_id
-    AND status = 'Pending';
+    FROM projectapplication AS pa
+    JOIN "Project" AS p
+                                
+    ON p.project_id = pa.project_id 
+    WHERE p.admin_id=:user_id
+    AND pa.status = 'Pending'
 """), {"user_id": data["user_id"]})
     pending_applications = result.fetchall()
 
@@ -992,7 +1054,8 @@ def notification_sql(data):
         "status": application[4],
         "applied_at": application[5].isoformat(),  # Convert timestamp to ISO format string
         "remarks": application[6],
-        "applied":"user"
+        "applied":"user",
+        "title":application[9]
     }
     for application in pending_applications
     ]
@@ -1022,6 +1085,30 @@ def notification_sql(data):
     ]
     all_notifications_json = applications_json + project_joins_json
     return jsonify({"notification":all_notifications_json}),200
+def member_sql(data):
+    query = text("""
+        SELECT *
+        FROM projectmembers 
+        WHERE project_id = :project_id AND member_id = :member_id
+    """)
+
+    with engine.connect() as conn:
+        result = conn.execute(query, {
+            "project_id":data['project_id'],
+            "member_id": data['member_id']
+        })
+
+        row=result.fetchone()
+
+        if(row):
+
+            return jsonify({"member":"yes","role":row[2]}), 200
+
+           
+        
+        else:
+            return jsonify({"member":"no"}), 401
+     
 
 
 

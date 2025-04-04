@@ -9,9 +9,10 @@ from datetime import datetime,timedelta
 from auth import  firebase_uid_required  # Import auth_bp
 
 from smtp import send_email
-from sql import add_projects,ranking,first_logins,profile_views,list_of_mentors_sql,apply_mentors_sql,apply_project_sql
-from sql import apply_project_status_sql,list_apply_project_sql,update_project_application_status_sql,apply_project_status_takeback_sql,update_profile_sql,accept_mentor_sql
-from sql import apply_mentors_takeback_sql,list_users_sql,list_projects_sql,list_current_projects_sql,list_past_projects_sql,admin_request_sql,admin_request_accept_sql,list_myprojects_sql,user_insert_google_sql
+from sql import *
+#from sql import add_projects,ranking,first_logins,profile_views,list_of_mentors_sql,apply_mentors_sql,apply_project_sql
+#from sql import apply_project_status_sql,list_apply_project_sql,update_project_application_status_sql,apply_project_status_takeback_sql,update_profile_sql,accept_mentor_sql,notification_sql
+#from sql import apply_mentors_takeback_sql,list_users_sql,list_projects_sql,list_current_projects_sql,list_past_projects_sql,admin_request_sql,admin_request_accept_sql,list_myprojects_sql,user_insert_google_sql
 from google.cloud.firestore_v1 import FieldFilter
 # Initialize Firebase Admin
 cred = credentials.Certificate("key.json")
@@ -22,6 +23,12 @@ users = db.collection('users')
 app = Flask(__name__)
 
 CORS(app,supports_credentials=True)
+
+@app.route('/check',methods=['GET'])
+def check():
+   return insert()
+
+
 @app.route('/verify/user_id',methods=['POST'])
 def verify_email():
             data = request.json
@@ -101,7 +108,9 @@ def verify():
         print(f"User name: {user_name}")
         user_name = user_name.replace("-IIITK", "").strip()
         data['user_name']=user_name
-        data[roll_no]=roll_no
+        #data[roll_no]=roll_no
+        data['roll_no']=email.split('@')[0]
+
         #data[user_name]=user_name
        
 
@@ -115,7 +124,6 @@ def verify():
          #   print(username)
          #not for prof
             users = db.collection('users').document( email.split('@')[0] )
-            user_insert_google_sql(data)
         
 
             
@@ -146,6 +154,8 @@ def verify():
             max_age=60*60*24*3,  # 7 days expiration
             
             )
+            user_insert_google_sql(data)
+
            # print(response.headers)
             return response
                #add user in db if not present
@@ -157,6 +167,13 @@ def verify():
     except Exception as e:
          return jsonify({"error": str(e)}), 401
 
+def get_roll_no(uid):
+    user_id=auth.get_user(uid)
+    
+    email=user_id.email.split('@')[0]
+    return email
+#uid="cpV0OfOaqvfQGdGMI6c1vkjqTEg2"
+#get_roll_no(uid)
  
 @app.route('/auto_login',methods=['GET','POST'])
 def auto_login():
@@ -264,7 +281,7 @@ def update_profile():
     return update_profile_sql(data)
 
 
-"""@app.route('/list/mentors',methods=['POST'])
+@app.route('/list/mentors',methods=['POST'])
 def list_of_mentors():
      data=request.json
      errors=list_of_mentors_schema().validate(data)
@@ -299,7 +316,7 @@ def accept_mentor():
      else:
          #required mentor_id(user_id),project_id
        return accept_mentor_sql(data)
-     """
+   
 @app.route('/list/projects',methods=['POST'])
  # Apply the middleware here to protect the route
 
@@ -388,7 +405,7 @@ def list_apply_project_():
     return list_apply_project_sql(data)
 
 @app.route('/update/project/app/status',methods=['POST'])
-@firebase_uid_required  # Apply the middleware here to protect the route
+#@firebase_uid_required  # Apply the middleware here to protect the route
 
 def list_update_project_status():
     data=request.json
@@ -398,7 +415,7 @@ def list_update_project_status():
 #delete project by admi
 
 @app.route('/admin/request',methods=['POST'])
-@firebase_uid_required  # Apply the middleware here to protect the route
+#@firebase_uid_required  # Apply the middleware here to protect the route
 
 
 def admin_request():
@@ -411,13 +428,11 @@ def admin_request():
 
 
 @app.route('/admin/request/accept',methods=['POST'])
-@firebase_uid_required  # Apply the middleware here to protect the route
+#@firebase_uid_required  # Apply the middleware here to protect the route
 
 
 def admin_request_accept():
- #check user_id is admin or not  later 
  data=request.json
-#check whether user is admin  then request
 
  return admin_request_accept_sql(data)
 
@@ -436,18 +451,26 @@ def list_users():
     
      return list_users_sql()
 
+@app.route('/notification',methods=['POST'])
+#@firebase_uid_required  # Apply the middleware here to protect the route
+
+def notification():
+
+ data=request.json
+ 
+ return notification_sql(data)
+
+@app.route('/verify/member',methods=['POST'])
+def verify_member():
+ data=request.json
+ return member_sql(data)
+
 
      
 if __name__ == "__main__":
     app.run(debug=True)
 
-@app.route('/notification',methods=['POST'])
-@firebase_uid_required  # Apply the middleware here to protect the route
 
-def notification():
-
-
-    return notification_sql()
 
 
 
