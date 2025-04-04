@@ -8,7 +8,7 @@ import { projectsData } from "@/lib/sample-data"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react";
-
+ //in this call the api  give project_id  , user_id (from usercontext )   
 export default function ProjectPage() {
   const params = useParams();
   const project_id = params.id as string;

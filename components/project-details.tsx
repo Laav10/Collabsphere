@@ -20,8 +20,8 @@ interface ProjectDetails {
   team_members: any[];        
   tech_stack: string[];       
 }
-
-const fetchProjectDetails = async(project_id: string) => {
+// isme admin  
+const fetchProjectDetails = async(project_id: string ) => {
   try {
     const response = await fetch(`http://127.0.0.1:5000/project/view_details?project_id=${project_id}`, {
       method: "GET",

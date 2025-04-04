@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -20,10 +20,12 @@ import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
-import { CalendarIcon, Plus, Clock, Users, CheckCircle2, Circle, ArrowRight, AlertCircle } from "lucide-react"
+import { CalendarIcon, Plus, Clock, Users, CheckCircle2, Circle, ArrowRight, AlertCircle, History } from "lucide-react"
 import { cn } from "@/lib/utils"
 import TeamMemberDropdown from "@/components/team-members"
 import { useUserContext } from "@/lib/usercontext"
+import { Toaster } from "@/components/ui/sonner"
+import { toast } from "sonner"
 
 type UserRole = "admin" | "moderator" | "member"
 
@@ -118,6 +120,29 @@ export default function SprintManagement() {
   })
 
   const [selectedSprintId, setSelectedSprintId] = useState<string>(sprints[0]?.id || "")
+  const [loading, setLoading] = useState(false)
+  const [previousSprints, setPreviousSprints] = useState<{ id: string; name: string }[]>([])
+
+  useEffect(() => {
+    const fetchPreviousSprints = async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:5000/project/sprints/previous", {
+          method: "GET",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setPreviousSprints(data.sprints || [])
+        }
+      } catch (error) {
+        console.error("Failed to fetch previous sprints:", error)
+      }
+    }
+
+    fetchPreviousSprints()
+  }, [])
 
   const handleAddSprint = () => {
     const sprint: Sprint = {
@@ -167,26 +192,72 @@ export default function SprintManagement() {
     })
   }
 
-  const updateTaskStatus = (sprintId: string, taskId: string, status: "todo" | "in-progress" | "completed") => {
-    setSprints(
-      sprints.map((sprint) => {
-        if (sprint.id === sprintId) {
-          return {
-            ...sprint,
-            tasks: sprint.tasks.map((task) => {
-              if (task.id === taskId) {
-                return {
-                  ...task,
-                  status,
-                }
+  const updateTaskStatus = async (sprintId: string, taskId: string, status: "todo" | "in-progress" | "completed") => {
+    setLoading(true)
+
+    let endpoint = ""
+    let apiStatus = ""
+
+    switch (status) {
+      case "in-progress":
+        endpoint = "/project/task/start"
+        apiStatus = "incomplete"
+        break
+      case "completed":
+        endpoint = "/project/task/complete"
+        apiStatus = "in-progress"
+        break
+      case "todo":
+        endpoint = "/project/task/reopen"
+        apiStatus = "completed"
+        break
+    }
+
+    try {
+      const response = await fetch(`http://127.0.0.1:5000${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          task_id: taskId,
+          status: apiStatus,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSprints(
+          sprints.map((sprint) => {
+            if (sprint.id === sprintId) {
+              return {
+                ...sprint,
+                tasks: sprint.tasks.map((task) => {
+                  if (task.id === taskId) {
+                    return {
+                      ...task,
+                      status,
+                    }
+                  }
+                  return task
+                }),
               }
-              return task
-            }),
-          }
-        }
-        return sprint
-      }),
-    )
+            }
+            return sprint
+          }),
+        )
+
+        toast(
+      `    title: "Task updated"`)
+      } else {
+        toast(`   title: "Failed to update task",`)
+      }
+    } catch (error) {
+      console.error(`Error updating task to ${status}:`, error)
+      toast(`Network error occurred`)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const selectedSprint = sprints.find((sprint) => sprint.id === selectedSprintId)
@@ -309,6 +380,40 @@ export default function SprintManagement() {
                   </Button>
                 ))}
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center">
+                <History className="h-4 w-4 mr-2" />
+                Previous Sprints
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {previousSprints.length > 0 ? (
+                <Select
+                  onValueChange={(value) => {
+                    const sprint = previousSprints.find((s) => s.id === value)
+                    if (sprint) {
+                      toast("Loading previous sprint")
+                    }
+                  }}
+                >
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700">
+                    <SelectValue placeholder="Select past sprint" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {previousSprints.map((sprint) => (
+                      <SelectItem key={sprint.id} value={sprint.id}>
+                        {sprint.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-xs text-muted-foreground">No previous sprints found</p>
+              )}
             </CardContent>
           </Card>
 
@@ -510,8 +615,13 @@ export default function SprintManagement() {
                                   size="sm"
                                   className="h-8 px-2 text-xs"
                                   onClick={() => updateTaskStatus(selectedSprint.id, task.id, "in-progress")}
+                                  disabled={loading}
                                 >
-                                  <ArrowRight className="h-3 w-3 mr-1" /> Start
+                                  {loading ? "Updating..." : (
+                                    <>
+                                      <ArrowRight className="h-3 w-3 mr-1" /> Start
+                                    </>
+                                  )}
                                 </Button>
                               )}
                             </CardFooter>
@@ -555,8 +665,13 @@ export default function SprintManagement() {
                                   size="sm"
                                   className="h-8 px-2 text-xs"
                                   onClick={() => updateTaskStatus(selectedSprint.id, task.id, "completed")}
+                                  disabled={loading}
                                 >
-                                  <CheckCircle2 className="h-3 w-3 mr-1" /> Complete
+                                  {loading ? "Updating..." : (
+                                    <>
+                                      <CheckCircle2 className="h-3 w-3 mr-1" /> Complete
+                                    </>
+                                  )}
                                 </Button>
                               )}
                             </CardFooter>
@@ -600,8 +715,13 @@ export default function SprintManagement() {
                                   size="sm"
                                   className="h-8 px-2 text-xs"
                                   onClick={() => updateTaskStatus(selectedSprint.id, task.id, "todo")}
+                                  disabled={loading}
                                 >
-                                  <Circle className="h-3 w-3 mr-1" /> Reopen
+                                  {loading ? "Updating..." : (
+                                    <>
+                                      <Circle className="h-3 w-3 mr-1" /> Reopen
+                                    </>
+                                  )}
                                 </Button>
                               )}
                             </CardFooter>

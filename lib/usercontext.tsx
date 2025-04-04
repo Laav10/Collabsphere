@@ -3,7 +3,6 @@ import React, { createContext, useState, useEffect, ReactNode } from 'react';
 interface User {
   id: string;
   email: string;
-  role?: "admin" | "moderator" | "member"; // Add role field
 }
 
 interface UserContextType {
