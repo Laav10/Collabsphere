@@ -20,10 +20,12 @@ import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
-import { CalendarIcon, Plus, Clock, Users, CheckCircle2, Circle, ArrowRight } from "lucide-react"
+import { CalendarIcon, Plus, Clock, Users, CheckCircle2, Circle, ArrowRight, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import TeamMemberDropdown from "@/components/team-members"
+import { useUserContext } from "@/lib/usercontext"
 
+type UserRole = "admin" | "moderator" | "member"
 
 type Task = {
   id: string
@@ -41,6 +43,7 @@ type Sprint = {
   endDate: Date
   tasks: Task[]
 }
+
 const teamMembers = [
   { id: "1", name: "Alice Johnson" },
   { id: "2", name: "Bob Smith" },
@@ -50,7 +53,23 @@ const teamMembers = [
   { id: "6", name: "Fiona Gallagher" },
   { id: "7", name: "George Miller" },
 ]
+
 export default function SprintManagement() {
+  const { user } = useUserContext()
+
+  const getUserRole = (): UserRole => {
+    if (!user) return "member"
+    if (user.email === "admin@iiitkottayam.ac.in") return "admin"
+    if (user.email.includes("moderator")) return "moderator"
+    return "member"
+  }
+
+  const userRole = getUserRole()
+  const isAdmin = userRole === "admin"
+  const isModerator = userRole === "moderator"
+  const canManageSprints = isAdmin || isModerator
+  const canAssignModerators = isAdmin
+
   const [sprints, setSprints] = useState<Sprint[]>([
     {
       id: "sprint-1",
@@ -177,90 +196,92 @@ export default function SprintManagement() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-pink-500">Sprint Management</h1>
 
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-pink-500 to-blue-500 hover:from-pink-600 hover:to-blue-600">
-              <Plus className="mr-2 h-4 w-4" /> Create Sprint
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-zinc-900 border-zinc-800">
-            <DialogHeader>
-              <DialogTitle>Create New Sprint</DialogTitle>
-              <DialogDescription>
-                Add a new sprint to break down your project into manageable timeframes.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label className="text-sm">Sprint Name</label>
-                <Input
-                  placeholder="e.g. Sprint 1 - Project Setup"
-                  className="bg-zinc-800 border-zinc-700"
-                  value={newSprint.name}
-                  onChange={(e) => setNewSprint({ ...newSprint, name: e.target.value })}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm">Start Date</label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn("w-full justify-start text-left font-normal bg-zinc-800 border-zinc-700")}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {format(newSprint.startDate, "PPP")}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={newSprint.startDate}
-                        onSelect={(date) => date && setNewSprint({ ...newSprint, startDate: date })}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm">End Date</label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn("w-full justify-start text-left font-normal bg-zinc-800 border-zinc-700")}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {format(newSprint.endDate, "PPP")}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={newSprint.endDate}
-                        onSelect={(date) => date && setNewSprint({ ...newSprint, endDate: date })}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button
-                onClick={handleAddSprint}
-                className="bg-gradient-to-r from-pink-500 to-blue-500 hover:from-pink-600 hover:to-blue-600"
-              >
-                Create Sprint
+        {canManageSprints && (
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-to-r from-pink-500 to-blue-500 hover:from-pink-600 hover:to-blue-600">
+                <Plus className="mr-2 h-4 w-4" /> Create Sprint
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="bg-zinc-900 border-zinc-800">
+              <DialogHeader>
+                <DialogTitle>Create New Sprint</DialogTitle>
+                <DialogDescription>
+                  Add a new sprint to break down your project into manageable timeframes.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label className="text-sm">Sprint Name</label>
+                  <Input
+                    placeholder="e.g. Sprint 1 - Project Setup"
+                    className="bg-zinc-800 border-zinc-700"
+                    value={newSprint.name}
+                    onChange={(e) => setNewSprint({ ...newSprint, name: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm">Start Date</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn("w-full justify-start text-left font-normal bg-zinc-800 border-zinc-700")}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {format(newSprint.startDate, "PPP")}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={newSprint.startDate}
+                          onSelect={(date) => date && setNewSprint({ ...newSprint, startDate: date })}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm">End Date</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn("w-full justify-start text-left font-normal bg-zinc-800 border-zinc-700")}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {format(newSprint.endDate, "PPP")}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={newSprint.endDate}
+                          onSelect={(date) => date && setNewSprint({ ...newSprint, endDate: date })}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  onClick={handleAddSprint}
+                  className="bg-gradient-to-r from-pink-500 to-blue-500 hover:from-pink-600 hover:to-blue-600"
+                >
+                  Create Sprint
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -314,22 +335,44 @@ export default function SprintManagement() {
               </CardContent>
             </Card>
           )}
-               <Card className="bg-zinc-900 border-zinc-800">
-              
+
+          {canAssignModerators && (
+            <Card className="bg-zinc-900 border-zinc-800">
+              <CardHeader>
+                <CardTitle className="text-base">Moderator Assignment</CardTitle>
+              </CardHeader>
               <CardContent className="space-y-2">
-              
- 
-    <div className="mb-6">
-      <TeamMemberDropdown
-        teamMembers={teamMembers}
-        onSelect={(member) => alert(`${member.name} is now the moderator!`)}
-        label="Assign Moderator"
-      />
-    </div>
-
-
+                <TeamMemberDropdown
+                  teamMembers={teamMembers}
+                  onSelect={(member) => alert(`${member.name} is now the moderator!`)}
+                  label="Assign Moderator"
+                />
               </CardContent>
             </Card>
+          )}
+
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader>
+              <CardTitle className="text-base">User Role</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Badge
+                className={cn(
+                  "px-2 py-1",
+                  isAdmin ? "bg-green-600" : isModerator ? "bg-blue-600" : "bg-gray-600",
+                )}
+              >
+                {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+              </Badge>
+
+              {!canManageSprints && (
+                <div className="flex items-center mt-3 text-yellow-400 text-sm">
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  You are in view-only mode
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         <div className="md:col-span-3">
@@ -338,96 +381,98 @@ export default function SprintManagement() {
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold">{selectedSprint.name} Tasks</h2>
 
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="bg-zinc-800 border-zinc-700">
-                      <Plus className="mr-2 h-4 w-4" /> Add Task
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="bg-zinc-900 border-zinc-800">
-                    <DialogHeader>
-                      <DialogTitle>Add New Task</DialogTitle>
-                      <DialogDescription>
-                        Create a new task for this sprint with description and weightage.
-                      </DialogDescription>
-                    </DialogHeader>
-
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <label className="text-sm">Task Title</label>
-                        <Input
-                          placeholder="e.g. Implement user authentication"
-                          className="bg-zinc-800 border-zinc-700"
-                          value={newTask.title}
-                          onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm">Description</label>
-                        <Textarea
-                          placeholder="Describe what needs to be done in this task"
-                          className="bg-zinc-800 border-zinc-700 min-h-[100px]"
-                          value={newTask.description}
-                          onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                        />
-                      </div>
-                   
-      <TeamMemberDropdown
-        teamMembers={teamMembers}
-        onSelect={(member) => alert(`${member.name} is now the moderator!`)}
-        label="Give task to team member"
-      />
-
-                      <div className="space-y-2 mt-2">
-                        <div className="flex justify-between">
-                          <label className="text-sm">Task Weightage (Story Points)</label>
-                          <span className="text-sm font-medium">{newTask.weightage}</span>
-                        </div>
-                        <Slider
-                          defaultValue={[5]}
-                          max={13}
-                          min={1}
-                          step={1}
-                          value={[newTask.weightage]}
-                          onValueChange={(value) => setNewTask({ ...newTask, weightage: value[0] })}
-                        />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>1 (Easy)</span>
-                          <span>13 (Complex)</span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm">Assign to Sprint</label>
-                        <Select
-                          value={newTask.sprintId || selectedSprintId}
-                          onValueChange={(value) => setNewTask({ ...newTask, sprintId: value })}
-                        >
-                          <SelectTrigger className="bg-zinc-800 border-zinc-700">
-                            <SelectValue placeholder="Select sprint" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {sprints.map((sprint) => (
-                              <SelectItem key={sprint.id} value={sprint.id}>
-                                {sprint.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <DialogFooter>
-                      <Button
-                        onClick={handleAddTask}
-                        className="bg-gradient-to-r from-pink-500 to-blue-500 hover:from-pink-600 hover:to-blue-600"
-                      >
-                        Add Task
+                {canManageSprints && (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="bg-zinc-800 border-zinc-700">
+                        <Plus className="mr-2 h-4 w-4" /> Add Task
                       </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                    </DialogTrigger>
+                    <DialogContent className="bg-zinc-900 border-zinc-800">
+                      <DialogHeader>
+                        <DialogTitle>Add New Task</DialogTitle>
+                        <DialogDescription>
+                          Create a new task for this sprint with description and weightage.
+                        </DialogDescription>
+                      </DialogHeader>
+
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <label className="text-sm">Task Title</label>
+                          <Input
+                            placeholder="e.g. Implement user authentication"
+                            className="bg-zinc-800 border-zinc-700"
+                            value={newTask.title}
+                            onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm">Description</label>
+                          <Textarea
+                            placeholder="Describe what needs to be done in this task"
+                            className="bg-zinc-800 border-zinc-700 min-h-[100px]"
+                            value={newTask.description}
+                            onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                          />
+                        </div>
+
+                        <TeamMemberDropdown
+                          teamMembers={teamMembers}
+                          onSelect={(member) => alert(`${member.name} is now the moderator!`)}
+                          label="Give task to team member"
+                        />
+
+                        <div className="space-y-2 mt-2">
+                          <div className="flex justify-between">
+                            <label className="text-sm">Task Weightage (Story Points)</label>
+                            <span className="text-sm font-medium">{newTask.weightage}</span>
+                          </div>
+                          <Slider
+                            defaultValue={[5]}
+                            max={13}
+                            min={1}
+                            step={1}
+                            value={[newTask.weightage]}
+                            onValueChange={(value) => setNewTask({ ...newTask, weightage: value[0] })}
+                          />
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>1 (Easy)</span>
+                            <span>13 (Complex)</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm">Assign to Sprint</label>
+                          <Select
+                            value={newTask.sprintId || selectedSprintId}
+                            onValueChange={(value) => setNewTask({ ...newTask, sprintId: value })}
+                          >
+                            <SelectTrigger className="bg-zinc-800 border-zinc-700">
+                              <SelectValue placeholder="Select sprint" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {sprints.map((sprint) => (
+                                <SelectItem key={sprint.id} value={sprint.id}>
+                                  {sprint.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <DialogFooter>
+                        <Button
+                          onClick={handleAddTask}
+                          className="bg-gradient-to-r from-pink-500 to-blue-500 hover:from-pink-600 hover:to-blue-600"
+                        >
+                          Add Task
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -459,14 +504,16 @@ export default function SprintManagement() {
                               )}
                             </CardContent>
                             <CardFooter className="p-2 pt-0 flex justify-end">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 px-2 text-xs"
-                                onClick={() => updateTaskStatus(selectedSprint.id, task.id, "in-progress")}
-                              >
-                                <ArrowRight className="h-3 w-3 mr-1" /> Start
-                              </Button>
+                              {canManageSprints && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-2 text-xs"
+                                  onClick={() => updateTaskStatus(selectedSprint.id, task.id, "in-progress")}
+                                >
+                                  <ArrowRight className="h-3 w-3 mr-1" /> Start
+                                </Button>
+                              )}
                             </CardFooter>
                           </Card>
                         ))}
@@ -502,14 +549,16 @@ export default function SprintManagement() {
                               )}
                             </CardContent>
                             <CardFooter className="p-2 pt-0 flex justify-end">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 px-2 text-xs"
-                                onClick={() => updateTaskStatus(selectedSprint.id, task.id, "completed")}
-                              >
-                                <CheckCircle2 className="h-3 w-3 mr-1" /> Complete
-                              </Button>
+                              {canManageSprints && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-2 text-xs"
+                                  onClick={() => updateTaskStatus(selectedSprint.id, task.id, "completed")}
+                                >
+                                  <CheckCircle2 className="h-3 w-3 mr-1" /> Complete
+                                </Button>
+                              )}
                             </CardFooter>
                           </Card>
                         ))}
@@ -545,14 +594,16 @@ export default function SprintManagement() {
                               )}
                             </CardContent>
                             <CardFooter className="p-2 pt-0 flex justify-end">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 px-2 text-xs"
-                                onClick={() => updateTaskStatus(selectedSprint.id, task.id, "todo")}
-                              >
-                                <Circle className="h-3 w-3 mr-1" /> Reopen
-                              </Button>
+                              {canManageSprints && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-2 text-xs"
+                                  onClick={() => updateTaskStatus(selectedSprint.id, task.id, "todo")}
+                                >
+                                  <Circle className="h-3 w-3 mr-1" /> Reopen
+                                </Button>
+                              )}
                             </CardFooter>
                           </Card>
                         ))}

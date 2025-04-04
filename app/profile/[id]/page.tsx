@@ -376,7 +376,7 @@ export default function SettingsPage() {
                           <span>{userData.email}</span>
                         </div>
 
-                        {/* GitHub Profile */}
+                        {/*  Profile */}
                         <div className="flex items-center gap-2">
                           <Github className="h-5 w-5 text-pink-500" />
                           <a

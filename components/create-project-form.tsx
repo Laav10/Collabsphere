@@ -5,13 +5,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -31,10 +24,6 @@ export default function CreateProjectForm({
   onSuccess,
 }: CreateProjectFormProps) {
   const router = useRouter();
-  const [teamMembers, setTeamMembers] = useState<string[]>([]);
-  const [memberEmail, setMemberEmail] = useState("");
-  const [milestones, setMilestones] = useState<string[]>([]);
-  const [milestone, setMilestone] = useState("");
   const [techStack, setTechStack] = useState<string[]>([]);
   const [tech, setTech] = useState("");
   const [startDate, setStartDate] = useState<Date>(new Date());
@@ -53,32 +42,6 @@ export default function CreateProjectForm({
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleAddMember = () => {
-    if (memberEmail && !teamMembers.includes(memberEmail)) {
-      setTeamMembers([...teamMembers, memberEmail]);
-      setMemberEmail("");
-    }
-  };
-
-  const handleRemoveMember = (email: string) => {
-    setTeamMembers(teamMembers.filter((member) => member !== email));
-  };
-
-  const handleAddMilestone = () => {
-    if (milestone && !milestones.includes(milestone)) {
-      setMilestones([...milestones, milestone]);
-      setMilestone("");
-    }
-  };
-
-  const handleRemoveMilestone = (item: string) => {
-    setMilestones(milestones.filter((m) => m !== item));
   };
 
   const handleAddTech = () => {

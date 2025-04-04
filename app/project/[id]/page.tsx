@@ -1,21 +1,19 @@
 "use client"
-
-import { useState } from "react"
 import { useParams } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import ProjectDetails from "@/components/project-details"
+import ProjectDetails from "@/components/project-details2"
 import SprintManagement from "@/components/sprint-management"
 import ProjectAnalytics from "@/components/project-analytics"
 import { projectsData } from "@/lib/sample-data"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
+import { useState, useEffect } from "react";
 
 export default function ProjectPage() {
-  const params = useParams()
-  const projectId = params.id as string
-
-  const [project, setProject] = useState(projectsData.find((p) => p.id === projectId) || null)
-
+  const params = useParams();
+  const project_id = params.id as string;
+  
+  const [project, setProject] = useState(projectsData.find((p) => p.id === project_id) || null)
   if (!project) {
     return (
       <div className="min-h-screen bg-black text-white p-4 md:p-8">
@@ -36,6 +34,8 @@ export default function ProjectPage() {
     )
   }
 
+  // Use either project from static data or projectDetails from API
+
   return (
     <main className="min-h-screen bg-black text-white p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -43,7 +43,7 @@ export default function ProjectPage() {
           <Link href="/my-projects" className="text-muted-foreground hover:text-white mr-4">
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-3xl font-bold text-pink-500">{project.name}</h1>
+          <h1 className="text-3xl font-bold text-pink-500">{ "A Web-development Project"}</h1>
         </div>
 
         <Tabs defaultValue="details" className="w-full">
@@ -51,7 +51,6 @@ export default function ProjectPage() {
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="sprints">Sprints</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
-      
           </TabsList>
 
           <TabsContent value="details">
@@ -59,11 +58,11 @@ export default function ProjectPage() {
           </TabsContent>
 
           <TabsContent value="sprints">
-            <SprintManagement  />
+            <SprintManagement />
           </TabsContent>
 
           <TabsContent value="analytics">
-            <ProjectAnalytics projectId={project.id} />
+            <ProjectAnalytics projectId={project_id} />
           </TabsContent>
         </Tabs>
       </div>

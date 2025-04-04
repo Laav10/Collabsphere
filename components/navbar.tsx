@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { LayoutDashboard, FolderKanban, Users, Settings } from "lucide-react"
-import Notification from "@/components/notification"
+
 
 interface NavbarProps {
   activeNav: string
@@ -59,10 +59,7 @@ export default function Navbar({ activeNav, setActiveNav }: NavbarProps) {
             <span>Profile</span>
           </Link>
         </nav>
-        <div className="mt-8">
-        {/* Notification Component */}
-        <Notification />
-      </div>
+            
       </div>
 
    

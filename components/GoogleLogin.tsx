@@ -11,6 +11,7 @@ import {
 } from "firebase/auth";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 import { Button } from "./ui/button";
+import { useUserContext } from "../lib/usercontext";
 
 const getFingerprint = async () => {
   const fp = await FingerprintJS.load();
@@ -20,6 +21,7 @@ const getFingerprint = async () => {
 
 const GoogleLogin = () => {
   const router = useRouter(); // Initialize router
+  const { setUser } = useUserContext();
   const [user_email, set_user_email] = useState("");
   const [user_password, set_user_password] = useState("");
 
@@ -54,6 +56,11 @@ const GoogleLogin = () => {
 
       // ✅ Navigate to dashboard if successful
       if (response.ok) {
+        // Update UserContext with user data
+        setUser({
+          id: uid,
+          email: user_email
+        });
         router.push("/dashboard");
       }
     } catch (error) {
@@ -68,7 +75,6 @@ const GoogleLogin = () => {
       const email = user.email;
 
       if (email?.endsWith("iiitkottayam.ac.in")) {
-          
         console.log("User allowed", user);
       } else {
         console.error("Unauthorized domain");
@@ -91,8 +97,14 @@ const GoogleLogin = () => {
       const data = await response.json();
       console.log("Server Response:", data);
       console.log(response.ok , "allowed ")
+      
       // ✅ Navigate to dashboard if successful
       if (response.ok) {
+        // Update UserContext with user data
+        setUser({
+          id: uid,
+          email: email || ""
+        });
         router.push("/dashboard");
       }
     } catch (error) {
