@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ProjectCard from "@/components/project-card"
 import CreateProjectButton from "@/components/create-project-button"
 import Navbar from "@/components/navbar"
+import { useUserContext } from "@/lib/usercontext"
 
 interface Project {
   admin_id: number
@@ -21,7 +22,8 @@ interface Project {
 export default function MyProjects() {
   const [activeTab, setActiveTab] = useState("current")
   const [projectsData, setProjectsData] = useState<Project[]>([]) // Typed as Project[]
-
+const {user } = useUserContext()
+const id = user?.id ? user?.id:'sanjay23bcy51';
   // Fetch projects from the API
   useEffect(() => {
     const fetchProjects = async () => {
@@ -35,13 +37,14 @@ export default function MyProjects() {
            // Replace with the actual user ID
            body: JSON.stringify({
           
-            user_id: 1, 
+            user_id: id , // Use the user ID from the context
             
           }),
         })
 
         if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`)
+          console.log("Error:", response.status)
+       
         }
 
         const data = await response.json()

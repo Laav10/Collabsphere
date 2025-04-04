@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import { CalendarIcon, X, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useUserContext } from "@/lib/usercontext";
 
 interface CreateProjectFormProps {
   onSuccess?: () => void;
@@ -30,6 +31,8 @@ export default function CreateProjectForm({
   const [endDate, setEndDate] = useState<Date>(
     new Date(new Date().setDate(new Date().getDate() + 30))
   );
+  const {user } = useUserContext()
+  const id = user?.id ? user?.id:'sanjay23bcy51';
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -60,7 +63,7 @@ export default function CreateProjectForm({
 
     // Prepare the data to match the API's expected format
     const projectData = {
-      admin_id: 2, // Replace with actual admin ID if needed
+      admin_id: id, // Replace with actual admin ID if needed
       title: formData.name,
       description: formData.description,
       start_date: format(startDate, "yyyy-MM-dd"),

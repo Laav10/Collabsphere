@@ -1,6 +1,6 @@
 "use client";
 import type React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +28,8 @@ import {
   Linkedin,
 } from "lucide-react";
 import Navbar from "@/components/navbar";
+import { useUserContext } from "@/lib/usercontext";
+import { error } from "console";
 // Sample user data
 
 // Sample projects data
@@ -123,7 +125,8 @@ export default function SettingsPage() {
     role_type: "", // Default value for role_type (empty string for initial state)
     tech_stack: [], // Initialize tech_stack as an empty array
   });
-
+const {user } = useUserContext()  
+const id = user?.id ? user?.id:'sanjay23bcy51';
   const handleAddTech = () => {
     if (tech.trim() !== "") {
       setTechStack((prev) => [...prev, tech.trim()]);
@@ -163,7 +166,7 @@ export default function SettingsPage() {
           headers: {
             "Content-Type": "application/json", // Specify that we're sending JSON data
           },
-          body: JSON.stringify({ roll_no }),
+          body: JSON.stringify({roll_no: id }),
         });
 
         if (!response.ok) {
@@ -171,6 +174,7 @@ export default function SettingsPage() {
         }
 
         const data = await response.json();
+        console.log("API Response: line 176", data);
         setProfile(data.user);
         setuserData(data.user[0]);
         console.log("Server Response:", data);
@@ -182,7 +186,8 @@ export default function SettingsPage() {
   }, []);
   const [project_setting, setProjectSetting] = useState<Project[]>([]);
   useEffect(() => {
-    let user_id = roll_no;
+    let user_id = id;
+    console.log(user_id);
     const fetchCurrentProjects = async () => {
       try {
         const response = await fetch(
@@ -198,7 +203,7 @@ export default function SettingsPage() {
         );
 
         if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
+        console.log("Error:", response.status);
         }
 
         const data = await response.json();
@@ -226,7 +231,7 @@ export default function SettingsPage() {
   }
   const [past_projects, setPastprojects] = useState<Past[]>([]);
   useEffect(() => {
-    let user_id = roll_no;
+    let user_id = id;
     const fetchPastProjects = async () => {
       try {
         const response = await fetch(
@@ -242,7 +247,7 @@ export default function SettingsPage() {
         );
 
         if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
+         console.log("Error:", response.status);
         }
 
         const data = await response.json();
@@ -278,7 +283,7 @@ export default function SettingsPage() {
       linkedin_profile: userData.linkedin_profile,
       email_update: userData.email_update,
       project_update: userData.project_update,
-      roll_no: 3,
+      roll_no: id,
     };
     try {
       console.log(profileData);

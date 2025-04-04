@@ -19,6 +19,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   // Load user from localStorage after the component mounts (client-side only)
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
+    console.log('Stored User:', storedUser);
+    // Check if user is already in localStorage
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }

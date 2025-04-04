@@ -12,6 +12,7 @@ import {
   Clock,
 } from "lucide-react"
 import Navbar from "@/components/navbar"
+import { useUserContext } from "@/lib/usercontext"
 
 interface Project {
   admin_id: number
@@ -31,10 +32,14 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
+  const {user } = useUserContext()
+  const id = user?.id ? user?.id:'sanjay23bcy51';
+  console.log(user?.id)
+  // Fetch projects from the API
   useEffect(() => {
     const fetchProjects = async () => {
       try {
+        
         setLoading(true)
         const response = await fetch("http://127.0.0.1:5000/list/projects", {
           method: "POST",
@@ -43,7 +48,7 @@ export default function ProjectsPage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            user_id: 1, 
+            user_id: id, 
           }),
         })
 
@@ -81,7 +86,7 @@ export default function ProjectsPage() {
         },
         body: JSON.stringify({
           project_id: projectId,
-          user_id: 1, 
+          user_id: user?.id, 
           role: "member",
           remarks: ""
         }),
