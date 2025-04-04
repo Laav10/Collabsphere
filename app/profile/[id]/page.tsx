@@ -12,18 +12,10 @@ import { Badge } from "@/components/ui/badge"; // Import Badge from shadcn/ui
 import { Plus, X } from "lucide-react"; // Import Plus and X icons from lucide-react
 import { useRouter } from "next/navigation";
 import {
-  LayoutDashboard,
-  Users,
-  BarChart3,
-  Settings,
-  FolderKanban,
   PlusCircle,
   LogOut,
-  Lock,
   Trophy,
   Mail,
-  Phone,
-  MapPin,
   Github,
   Linkedin,
 } from "lucide-react";
@@ -32,80 +24,6 @@ import { useUserContext } from "@/lib/usercontext";
 import { error } from "console";
 // Sample user data
 
-// Sample projects data
-const projectsData = {
-  current: [
-    {
-      id: 1,
-      name: "CollabSphere",
-      role: "Lead Developer",
-      progress: 65,
-      members: 5,
-    },
-    {
-      id: 2,
-      name: "TaskFlow",
-      role: "Frontend Developer",
-      progress: 40,
-      members: 3,
-    },
-  ],
-  past: [
-    {
-      id: 3,
-      name: "DataViz Platform",
-      role: "Full-stack Developer",
-      progress: 100,
-      members: 4,
-    },
-    {
-      id: 4,
-      name: "E-Learning Portal",
-      role: "Backend Developer",
-      progress: 100,
-      members: 6,
-    },
-  ],
-  applied: [
-    {
-      id: 5,
-      name: "AI Research Tool",
-      role: "Frontend Developer",
-      status: "Under Review",
-    },
-    {
-      id: 6,
-      name: "Healthcare Dashboard",
-      role: "Full-stack Developer",
-      status: "Shortlisted",
-    },
-  ],
-};
-
-// Sample hackathons data
-const hackathonsData = [
-  {
-    id: 1,
-    name: "Global Hack 2024",
-    date: "March 15-17, 2024",
-    position: "2nd Place",
-    project: "EcoTrack",
-  },
-  {
-    id: 2,
-    name: "CodeFest 2023",
-    date: "November 5-7, 2023",
-    position: "Finalist",
-    project: "MediConnect",
-  },
-  {
-    id: 3,
-    name: "DevJam 2023",
-    date: "July 22-24, 2023",
-    position: "1st Place",
-    project: "SmartCity",
-  },
-];
 
 export default function SettingsPage() {
   const router = useRouter(); // Initialize useRouter
@@ -505,35 +423,6 @@ const id = user?.id ? user?.id:'sanjay23bcy51';
               </CardContent>
             </Card>
 
-            {/* <Card className="bg-gray-800 border-none">
-              <CardHeader>
-                <CardTitle className="text-pink-500">
-                  Projects Applied
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {projectsData.applied.map((project) => (
-                    <div
-                      key={project.id}
-                      className="p-4 bg-gray-700 rounded-lg"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold">{project.name}</h3>
-                          <p className="text-sm text-gray-400">
-                            Role: {project.role}
-                          </p>
-                        </div>
-                        <div className="px-3 py-1 bg-yellow-500 text-black rounded-full text-sm">
-                          {project.status}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card> */}
           </TabsContent>
           <TabsContent value="settings" className="space-y-6">
             <Card className="bg-gray-800 border-none">
@@ -548,7 +437,7 @@ const id = user?.id ? user?.id:'sanjay23bcy51';
                   <Label htmlFor="name">Full Name</Label>
                   <Input
                     id="name"
-                    value={userData.name}
+                    value={userData.name || ''} // Use empty string as fallback
                     readOnly
                     onChange={(e) =>
                       setuserData((prev) => ({ ...prev, name: e.target.value }))
@@ -561,9 +450,8 @@ const id = user?.id ? user?.id:'sanjay23bcy51';
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
-                    value={userData.email}
+                    value={userData.email || ''} // Use empty string as fallback
                     readOnly
-  
                     onChange={(e) =>
                       setuserData((prev) => ({
                         ...prev,
@@ -578,11 +466,11 @@ const id = user?.id ? user?.id:'sanjay23bcy51';
                   <Label htmlFor="linkedIn">LinkedIn</Label>
                   <Input
                     id="linkedin"
-                    value={userData.linkedin_profile}
+                    value={userData.linkedin_profile || ''} // Use empty string as fallback
                     onChange={(e) =>
                       setuserData((prev) => ({
                         ...prev,
-                        linkedinProfile: e.target.value,
+                        linkedin_profile: e.target.value, // Fixed property name
                       }))
                     }
                     className="bg-gray-700 border-gray-600"
@@ -593,7 +481,7 @@ const id = user?.id ? user?.id:'sanjay23bcy51';
                   <Label htmlFor="github">GitHub</Label>
                   <Input
                     id="github"
-                    value={userData.github_profile}
+                    value={userData.github_profile || ''} // Use empty string as fallback
                     onChange={(e) =>
                       setuserData((prev) => ({
                         ...prev,
@@ -608,7 +496,7 @@ const id = user?.id ? user?.id:'sanjay23bcy51';
                   <Label htmlFor="pastexperience">Past Experience</Label>
                   <Input
                     id="pastexperience"
-                    value={userData.past_experience}
+                    value={userData.past_experience || ''} // Use empty string as fallback
                     onChange={(e) =>
                       setuserData((prev) => ({
                         ...prev,
@@ -677,7 +565,7 @@ const id = user?.id ? user?.id:'sanjay23bcy51';
             <Card className="bg-gray-800 border-none">
               <CardContent className="space-y-6">
                 <div className="pt-4 border-t border-gray-700">
-                  <Button variant="destructive" className="w-full">
+                  <Button onClick={()=>{}} variant="destructive" className="w-full">
                     <LogOut className="mr-2 h-4 w-4" /> Logout
                   </Button>
                 </div>

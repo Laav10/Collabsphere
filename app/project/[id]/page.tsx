@@ -1,58 +1,66 @@
 "use client"
-import { useParams } from "next/navigation"
+
+import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ProjectDetails from "@/components/project-details"
 import SprintManagement from "@/components/sprint-management"
+import { useParams } from "next/navigation"
+import Navbar from "@/components/navbar"
 import ProjectAnalytics from "@/components/project-analytics"
 
-import { ArrowLeft } from "lucide-react"
-import Link from "next/link"
- //in this call the api  give project_id  , user_id (from usercontext )   
 export default function ProjectPage() {
-  const params = useParams();
- const project_id = params?.id as number | undefined;
+  const params = useParams()
+  const projectId = parseInt(params.id as string)
+  const [projectTitle, setProjectTitle] = useState<string>("")
+  const [activeNav, setActiveNav] = useState("projects")
   
-  if(!project_id) {
-      return (
-        <div> getting some error in opening project</div>
-      )
-   
-           }
+  // This function will be passed to ProjectDetails component
+  const handleTitleChange = (title: string) => {
+    console.log("Project title received:", title)
+    setProjectTitle(title)
+    // Optionally update document title
+    document.title = `${title} | CollabSphere`
+  }
   
-
-  // Use either project from static data or projectDetails from API
-
   return (
-    <main className="min-h-screen bg-black text-white p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center mb-8">
-          <Link href="/my-projects" className="text-muted-foreground hover:text-white mr-4">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <h1 className="text-3xl font-bold text-pink-500">{ "A Web-development Project"}</h1>
-        </div>
-
+    <div className="flex min-h-screen bg-black text-white">
+      <Navbar activeNav={activeNav} setActiveNav={setActiveNav} />
+      
+      <div className="flex-1 p-8">
+        <h1 className="text-3xl font-bold text-pink-500 mb-8">
+          {projectTitle || "Project Details"}
+        </h1>
+        
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 mb-8">
-            <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="sprints">Sprints</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 bg-zinc-900 mb-8">
+            <TabsTrigger value="details" className="data-[state=active]:bg-pink-500">
+              Project Details
+            </TabsTrigger>
+            <TabsTrigger value="sprints" className="data-[state=active]:bg-pink-500">
+              Sprint Management
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="data-[state=active]:bg-pink-500">
+              Project Analytics
+            </TabsTrigger>
           </TabsList>
-
+          
           <TabsContent value="details">
-            <ProjectDetails project_id={project_id} />
+            <ProjectDetails 
+              project_id={projectId} 
+              onTitleChange={handleTitleChange} 
+            />
           </TabsContent>
-
+          
           <TabsContent value="sprints">
-            <SprintManagement />
+            <SprintManagement 
+              project_id={projectId}
+            />
           </TabsContent>
-
           <TabsContent value="analytics">
-            <ProjectAnalytics projectId={project_id} />
+           <ProjectAnalytics projectId={projectId}/>
           </TabsContent>
         </Tabs>
       </div>
-    </main>
+    </div>
   )
 }
-

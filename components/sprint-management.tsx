@@ -1,5 +1,4 @@
 "use client"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -50,7 +49,7 @@ const teamMembers = [
   { id: "6", name: "Fiona Gallagher" },
   { id: "7", name: "George Miller" },
 ]
-export default function SprintManagement() {
+export default function SprintManagement({project_id}: {project_id: number}) {
   const [sprints, setSprints] = useState<Sprint[]>([
     {
       id: "sprint-1",
@@ -320,9 +319,11 @@ export default function SprintManagement() {
               
  
     <div className="mb-6">
-      <TeamMemberDropdown
-        project_id={project_id}
-      />
+    <TeamMemberDropdown
+  projectId={project_id} // Your project ID
+  onSelect={(member) => console.log("Selected member:", member)}
+  label="Select Team Member"
+/>
     </div>
 
 
@@ -371,11 +372,11 @@ export default function SprintManagement() {
                         />
                       </div>
                    
-      <TeamMemberDropdown
-        teamMembers={teamMembers}
-        onSelect={(member) => alert(`${member.name} is now the moderator!`)}
-        label="Give task to team member"
-      />
+                      <TeamMemberDropdown
+  projectId={project_id} // Your project ID
+  onSelect={(member) => console.log("Selected member:", member)}
+  label="Select Team Member"
+/>
 
                       <div className="space-y-2 mt-2">
                         <div className="flex justify-between">

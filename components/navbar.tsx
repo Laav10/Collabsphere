@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { LayoutDashboard, FolderKanban, Users, Settings } from "lucide-react"
+import { useUserContext } from "@/lib/usercontext"
 
 
 interface NavbarProps {
@@ -8,6 +9,8 @@ interface NavbarProps {
 }
 
 export default function Navbar({ activeNav, setActiveNav }: NavbarProps) {
+    const {user } = useUserContext()
+    const id = user?.id ? user?.id:'sanjay23bcy51';
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white p-4">
         <div className="mb-8">
@@ -49,7 +52,7 @@ export default function Navbar({ activeNav, setActiveNav }: NavbarProps) {
           </Link>
 
           <Link
-            href="/profile/sanjay"
+            href={`/profile/${id}`}
             className={`w-full flex items-center space-x-2 p-3 rounded-md ${
               activeNav === "profile" ? "bg-pink-500 text-white" : "text-gray-300 hover:bg-gray-800"
             }`}
