@@ -466,6 +466,364 @@ def verify_member():
  return member_sql(data)
 
 
+#laavanya
+
+#1
+@app.route('/project/view_details', methods=['GET'])
+def view_project_details():
+    project_id = request.args.get("project_id")
+    #print(f"Received project_id: {project_id}") 
+
+    if not project_id:
+        return jsonify({"error": "Missing project_id parameter"}), 400
+
+    details = get_project_details(project_id)
+
+    if not details:
+        return jsonify({"error": "Project not found"}), 404
+
+    return jsonify(details), 200
+
+#2
+@app.route('/project/analytics', methods=['GET'])
+def project_analytics():
+    project_id = request.args.get("project_id")
+    if not project_id:
+        return jsonify({"error": "Missing project_id parameter"}), 400
+    try:
+       
+        project_id = int(project_id)
+        analytics = get_project_analytics(project_id)
+        
+        if analytics is None:
+            return jsonify({"error": "Project not found"}), 404
+        return jsonify(analytics), 200
+    except ValueError:
+        return jsonify({"error": "Invalid project_id"}), 400
+    except Exception as e:
+        print(f"Error in project_analytics route: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+#3   
+@app.route('/project/view_tasks', methods=['GET'])
+def view_sprint_tasks():
+    project_id = request.args.get("project_id")
+    if not project_id:
+        return jsonify({"error": "Missing project_id parameter"}), 400
+    try:
+        
+        project_id = int(project_id)
+        sprints = get_sprint_tasks(project_id)
+        if not sprints:
+            return jsonify({"error": "No sprints found for this project"}), 404
+        return jsonify({"sprints": sprints}), 200
+    except ValueError:
+        return jsonify({"error": "Invalid project_id format"}), 400
+    except Exception as e:
+        print(f"Error in view_sprint_tasks: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+    
+#4
+@app.route('/project/view_sprints', methods=['GET'])
+def get_sprints_route():
+    """API endpoint to fetch sprints for a given project."""
+    project_id = request.args.get("project_id")
+    
+    if not project_id:
+        return jsonify({"error": "Missing required parameter: project_id"}), 400
+
+    try:
+        sprints = get_sprints(project_id)  
+        return jsonify({"sprints": [{"sprint_id": s[0], "name": s[1], "Start": s[2], "End": s[3], "Status": s[4]} for s in sprints]}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+#5
+#Mapping Frontend to Backend
+STATUS_MAPPING = {
+    "To Do": "pending",
+    "In Progress": "review",
+    "Completed": "done"
+}
+@app.route('/project/edit_tasks/add_task', methods=['POST'])
+def add_task_route():
+    """API endpoint to add a task to a sprint with access control."""
+    data = request.json
+    project_id = data.get("project_id")
+    sprint_number = data.get("sprint_number")
+    description = data.get("description")
+    assigned_to = data.get("assigned_to")
+    points = data.get("points")
+    user_id = data.get("user_id")  
+    status = data.get("status", "To Do")  
+
+    if not all([project_id, sprint_number, description, assigned_to, points, user_id]):
+        return jsonify({"error": "Missing required parameters"}), 400
+
+    if not has_project_access(user_id, project_id): 
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    # **Check if Sprint is Open**
+    sprint_status = get_sprint_status(project_id, sprint_number)
+    if sprint_status != "open":
+        return jsonify({"error": "Cannot add task. Sprint is not open."}), 400
+
+    if status in STATUS_MAPPING:
+        status = STATUS_MAPPING[status]
+    else:
+        return jsonify({"error": "Invalid status value"}), 400
+
+    try:
+        with engine.connect() as conn:
+            add_task(conn, project_id, sprint_number, description, assigned_to, points, status)
+        return jsonify({"message": "Task added successfully!"}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+#6
+@app.route('/project/edit_tasks/update_task', methods=['POST'])
+def update_task_route():
+    data = request.json
+    task_id = data.get("task_id")
+
+    if not task_id:
+        return jsonify({"error": "Missing required parameter: task_id"}), 400
+
+    allowed_fields = ["description", "assigned_to", "status", "points"]
+    updates = {key: data[key] for key in data if key in allowed_fields}
+
+    if not updates:
+        return jsonify({"error": "No fields provided to update"}), 400
+
+    if "status" in updates and updates["status"] in STATUS_MAPPING:
+        updates["status"] = STATUS_MAPPING[updates["status"]]
+
+    try:
+        with engine.connect() as conn:
+            print(f"Checking if task {task_id} exists...")  
+            result = conn.execute(
+                text("SELECT COUNT(*) FROM task WHERE id = :task_id"),
+                {"task_id": task_id}
+            ).scalar()
+
+            if result == 0:
+                return jsonify({"error": "Task ID does not exist"}), 404
+
+        
+        success = update_task(task_id, **updates)
+        if success:
+            return jsonify({"message": "Task updated successfully!"}), 200
+        else:
+            return jsonify({"error": "Failed to update task"}), 500
+
+    except Exception as e:
+        print(f"Database Error: {str(e)}")  
+        return jsonify({"error": str(e)}), 500
+    
+#7
+@app.route('/project/task/start', methods=['POST'])
+def start_task():
+    """Move task from To Do to In Progress"""
+    data = request.json
+    task_id = data.get('task_id')
+    frontend_status = data.get('status')  
+
+    if not task_id or not frontend_status:
+        return jsonify({"error": "Missing task_id or status"}), 400
+
+   
+    db_status = STATUS_MAPPING.get(frontend_status)
+    if not db_status:
+        return jsonify({"error": f"Invalid status: {frontend_status}"}), 400
+
+    try:
+        success = update_task(task_id, status=db_status)  
+        if success:
+            return jsonify({"message": f"Task {task_id} moved to {frontend_status}."}), 200
+        else:
+            return jsonify({"error": "Failed to update task"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+#8
+@app.route('/project/task/complete', methods=['POST'])
+def complete_task():
+    """Move task from In Progress to Completed"""
+    data = request.json
+    task_id = data.get('task_id')
+    frontend_status = data.get('status')  
+
+    if not task_id or not frontend_status:
+        return jsonify({"error": "Missing task_id or status"}), 400
+
+    db_status = STATUS_MAPPING.get(frontend_status)
+    if not db_status:
+        return jsonify({"error": f"Invalid status: {frontend_status}"}), 400
+
+    try:
+        success = update_task(task_id, status=db_status)  
+        if success:
+            return jsonify({"message": f"Task {task_id} marked as {frontend_status}."}), 200
+        else:
+            return jsonify({"error": "Failed to update task"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+#9
+@app.route('/project/task/reopen', methods=['POST'])
+def reopen_task():
+    """Move task from Completed to To Do"""
+    data = request.json
+    task_id = data.get('task_id')
+    frontend_status = data.get('status')  
+    if not task_id or not frontend_status:
+        return jsonify({"error": "Missing task_id or status"}), 400
+
+    
+    db_status = STATUS_MAPPING.get(frontend_status)
+    if not db_status:
+        return jsonify({"error": f"Invalid status: {frontend_status}"}), 400
+
+    try:
+        success = update_task(task_id, status=db_status)  
+        if success:
+            return jsonify({"message": f"Task {task_id} reopened to {frontend_status}."}), 200
+        else:
+            return jsonify({"error": "Failed to update task"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+#10
+@app.route('/project/add_mod/eligible_users', methods=['GET'])
+def get_eligible_users_route():
+    """Fetch users eligible for moderator promotion"""
+    project_id = request.args.get("project_id")
+    
+    if not project_id:
+        return jsonify({"error": "Missing project_id"}), 400
+
+    try:
+        users = get_eligible_users_for_mod(project_id) 
+
+        if not users:
+            return jsonify({"message": "No eligible users found"}), 404
+        
+        return jsonify({"eligible_users": [{"roll_no": u[0], "name": u[1]} for u in users]}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+#11. 
+@app.route('/project/add_mod/promote', methods=['POST'])
+def promote_moderator_route(): 
+    """Promote user to moderator role with proper checks"""
+    data = request.json
+    project_id = data.get("project_id")
+    user_id = data.get("user_id")
+
+    if not project_id or not user_id:
+        return jsonify({"error": "Missing project_id or user_id"}), 400
+
+    try:
+        with engine.connect() as conn:
+            success, message = promote_to_moderator(conn, project_id, user_id)
+            if success:
+                return jsonify({"message": message}), 200
+            else:
+                return jsonify({"error": message}), 400
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+#12
+@app.route('/project/add_mod/demote', methods=['POST'])
+def demote_moderator_route():
+    """Remove moderator role (Revert to Member)"""
+    data = request.json
+    project_id = data.get("project_id")
+    user_id = data.get("user_id")
+
+    if not project_id or not user_id:
+        return jsonify({"error": "Missing project_id or user_id"}), 400
+
+    try:
+        success = remove_moderator(project_id, user_id)  
+        if success:
+            return jsonify({"message": f"User {user_id} demoted to Member."}), 200
+        else:
+            return jsonify({"error": "User is not a moderator or demotion failed."}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+#13
+@app.route("/rate_member", methods=["POST"])
+def rate_member():
+    try:
+        data = request.get_json()
+        rated_by = data.get("rated_by")
+        rated_user = data.get("rated_user")
+        project_id = data.get("project_id")
+        score = data.get("score")
+        comment = data.get("comment", "")
+
+        if not all([rated_by, rated_user, project_id, score]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        success = add_member_rating(rated_by, rated_user, project_id, score, comment)
+        
+        if success:
+            return jsonify({"message": "Rating added successfully"}), 201
+        else:
+            return jsonify({"error": "Failed to add rating"}), 500
+    except Exception as e:
+        print(f"Error in rate_member: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+    
+#14
+@app.route("/rate_project", methods=["POST"])
+def rate_project():
+    """Endpoint to rate a project (only if user is not a project member)"""
+    try:
+        data = request.get_json()
+        user_id = data.get("user_id")
+        project_id = data.get("project_id")
+        score = data.get("score")
+        comment = data.get("comment", "")
+
+        if not all([user_id, project_id, score]):
+            return jsonify({"error": "Missing required fields"}), 400
+
+        success = add_project_rating(user_id, project_id, score, comment)
+
+        if success:
+            return jsonify({"message": "Project rating added successfully"}), 201
+        return jsonify({"error": "You are a team member and cannot rate this project."}), 403
+
+    except Exception as e:
+        print(f"Error in rate_project: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+    
+#15 
+@app.route('/project/create_sprint', methods=['POST'])
+def create_sprint_route():
+    """API endpoint to create a sprint."""
+    data = request.get_json()
+    user_id = data.get("user_id")  # Must be passed in the request body for now
+    project_id = data.get("project_id")
+    name = data.get("name")
+    start_date = data.get("start_date")
+    end_date = data.get("end_date")
+
+    if not all([user_id, project_id, name, start_date, end_date]):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    return jsonify(create_sprint(user_id, project_id, name, start_date, end_date))
+
+
      
 if __name__ == "__main__":
     app.run(debug=True)
