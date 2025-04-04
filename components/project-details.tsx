@@ -44,7 +44,7 @@ const fetchProjectDetails = async(project_id: string ) => {
   }
 }
 
-export default function ProjectDetails(project_id:string) {
+export default function ProjectDetails({ project_id }: { project_id: string }) {
 
   
     const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);

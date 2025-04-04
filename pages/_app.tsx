@@ -1,6 +1,6 @@
 import { AppProps } from 'next/app';
 import { UserProvider } from '../lib/usercontext';
-import '../styles/globals.css'; // If you have global styles
+import "@/app/globals.css" // If you have global styles
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
@@ -11,3 +11,4 @@ function MyApp({ Component, pageProps }: AppProps) {
 }
 
 export default MyApp;
+    
