@@ -81,7 +81,7 @@ const id = user?.id ? user?.id:'sanjay23bcy51';
   // Handle the latest sprint selected from ProjectSprints component
   const handleLatestSprintSelect = (sprint: SprintFromAPI) => {
     console.log("Latest sprint from API:", sprint);
-    setCurrentApiSprint(sprint);
+    //setCurrentApiSprint(sprint);
     
     // Check if this sprint already exists in our local state
     const existingSprint = sprints.find(s => s.id === sprint.sprint_id.toString());
