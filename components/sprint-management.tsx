@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -13,16 +13,29 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
-import { CalendarIcon, Plus, Clock, Users, CheckCircle2, Circle, ArrowRight } from "lucide-react"
+import { CalendarIcon, Plus, Clock, Users, CheckCircle2, Circle, ArrowRight, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import TeamMemberDropdown from "@/components/team-members"
+import ProjectSprints from "@/components/view_sprints"
+import { useUserContext } from "@/lib/usercontext"
 
+
+interface SprintManagementProps {
+  project_id: number;
+  projectTitle?: string;
+}
+
+interface SprintFromAPI {
+  name: string;
+  sprint_id: number;
+  start_date?: string;
+  end_date?: string;
+}
 
 type Task = {
   id: string
@@ -40,50 +53,12 @@ type Sprint = {
   endDate: Date
   tasks: Task[]
 }
-const teamMembers = [
-  { id: "1", name: "Alice Johnson" },
-  { id: "2", name: "Bob Smith" },
-  { id: "3", name: "Charlie Brown" },
-  { id: "4", name: "Diana Prince" },
-  { id: "5", name: "Ethan Hunt" },
-  { id: "6", name: "Fiona Gallagher" },
-  { id: "7", name: "George Miller" },
-]
-export default function SprintManagement({project_id}: {project_id: number}) {
-  const [sprints, setSprints] = useState<Sprint[]>([
-    {
-      id: "sprint-1",
-      name: "Sprint 1 - Project Setup",
-      startDate: new Date(2024, 2, 1),
-      endDate: new Date(2024, 2, 14),
-      tasks: [
-        {
-          id: "task-1",
-          title: "Setup project repository",
-          description: "Create GitHub repository and setup initial project structure",
-          weightage: 3,
-          status: "completed",
-          assignee: "john.doe@example.com",
-        },
-        {
-          id: "task-2",
-          title: "Design database schema",
-          description: "Create ERD and define database tables and relationships",
-          weightage: 5,
-          status: "in-progress",
-          assignee: "jane.smith@example.com",
-        },
-        {
-          id: "task-3",
-          title: "Setup CI/CD pipeline",
-          description: "Configure GitHub Actions for continuous integration and deployment",
-          weightage: 8,
-          status: "todo",
-        },
-      ],
-    },
-  ])
 
+export default function SprintManagement({ project_id, projectTitle }: SprintManagementProps) {
+  const [sprints, setSprints] = useState<Sprint[]>([])
+  const [selectedSprintId, setSelectedSprintId] = useState<string>("")
+  const [currentApiSprint, setCurrentApiSprint] = useState<SprintFromAPI | null>(null)
+  
   const [newSprint, setNewSprint] = useState({
     name: "",
     startDate: new Date(),
@@ -95,86 +70,287 @@ export default function SprintManagement({project_id}: {project_id: number}) {
     description: "",
     weightage: 5,
     sprintId: "",
+    assignee: "",
   })
 
-  const [selectedSprintId, setSelectedSprintId] = useState<string>(sprints[0]?.id || "")
+  const [isCreatingSprint, setIsCreatingSprint] = useState(false)
+  const [isCreatingTask, setIsCreatingTask] = useState(false)
+  const [isLoadingTasks, setIsLoadingTasks] = useState(false)
 
-  const handleAddSprint = () => {
-    const sprint: Sprint = {
-      id: `sprint-${sprints.length + 1}`,
-      name: newSprint.name,
-      startDate: newSprint.startDate,
-      endDate: newSprint.endDate,
-      tasks: [],
+  // Handle the latest sprint selected from ProjectSprints component
+  const handleLatestSprintSelect = (sprint: SprintFromAPI) => {
+    console.log("Latest sprint from API:", sprint);
+    setCurrentApiSprint(sprint);
+    
+    // Check if this sprint already exists in our local state
+    const existingSprint = sprints.find(s => s.id === sprint.sprint_id.toString());
+    
+    if (existingSprint) {
+      setSelectedSprintId(existingSprint.id);
+    } else {
+      // Create a new sprint object from the API data
+      const newSprint: Sprint = {
+        id: sprint.sprint_id.toString(),
+        name: sprint.name,
+        startDate: sprint.start_date ? new Date(sprint.start_date) : new Date(),
+        endDate: sprint.end_date ? new Date(sprint.end_date) : new Date(new Date().setDate(new Date().getDate() + 14)),
+        tasks: [],
+      };
+      
+      setSprints(prev => [...prev, newSprint]);
+      setSelectedSprintId(newSprint.id);
+      
+      // Fetch tasks for this sprint
+      fetchSprintTasks(sprint.sprint_id);
     }
+  };
 
-    setSprints([...sprints, sprint])
-    setNewSprint({
-      name: "",
-      startDate: new Date(),
-      endDate: new Date(new Date().setDate(new Date().getDate() + 14)),
-    })
+  const handleAddSprint = async () => {
+    if (!newSprint.name) {
+      alert("Please enter a sprint name");
+      return;
+    }
+    
+    setIsCreatingSprint(true);
+    
+    try {
+      // Create sprint in the API
+      const response = await fetch("http://127.0.0.1:5000/project/create_sprint", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          project_id: project_id,
+          name: newSprint.name,
+          start_date: newSprint.startDate ,
+          end_date: newSprint.endDate
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Sprint created:", data);
+
+      // Add to local state
+      const sprint: Sprint = {
+        id: data.sprint_id.toString(),
+        name: newSprint.name,
+        startDate: newSprint.startDate,
+        endDate: newSprint.endDate,
+        tasks: [],
+      };
+
+      setSprints(prev => [...prev, sprint]);
+      setSelectedSprintId(sprint.id);
+      setCurrentApiSprint({
+        sprint_id: data.sprint_id,
+        name: newSprint.name,
+        start_date: format(newSprint.startDate, "yyyy-MM-dd"),
+        end_date: format(newSprint.endDate, "yyyy-MM-dd"),
+      });
+      
+      // Reset form
+      setNewSprint({
+        name: "",
+        startDate: new Date(),
+        endDate: new Date(new Date().setDate(new Date().getDate() + 14)),
+      });
+      
+    } catch (error) {
+      console.error("Error creating sprint:", error);
+      alert("Failed to create sprint. Please try again.");
+    } finally {
+      setIsCreatingSprint(false);
+    }
   }
 
-  const handleAddTask = () => {
-    if (!newTask.sprintId) return
-
-    const task: Task = {
-      id: `task-${Math.random().toString(36).substr(2, 9)}`,
-      title: newTask.title,
-      description: newTask.description,
-      weightage: newTask.weightage,
-      status: "todo",
+  const handleAddTask = async () => {
+    if (!newTask.title || !selectedSprintId) {
+      alert("Please enter a task title and select a sprint");
+      return;
     }
-
-    setSprints(
-      sprints.map((sprint) => {
-        if (sprint.id === newTask.sprintId) {
-          return {
-            ...sprint,
-            tasks: [...sprint.tasks, task],
-          }
-        }
-        return sprint
-      }),
+    
+    setIsCreatingTask(true);
+    console.log(
+       selectedSprintId,
+       newTask.title,
+       newTask.description,
+       newTask.weightage,
+       newTask.assignee || null,
+       project_id,
     )
+    const {user } = useUserContext()
+    const id = user?.id ? user?.id:'sanjay23bcy51';
+    try {
+      // Create task in the API
+      const response = await fetch("http://127.0.0.1:5000/project/edit_tasks/add_task", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sprint_number: selectedSprintId,
+          title: newTask.title,
+          description: newTask.description,
+          points: newTask.weightage,
+          assigned_to: newTask.assignee ,
+          project_id: project_id,
+          user_id: id,
+        }),
+      });
 
-    setNewTask({
-      title: "",
-      description: "",
-      weightage: 5,
-      sprintId: "",
-    })
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Task created:", data);
+
+      // Add to local state
+      const task: Task = {
+        id: data.task_id?.toString() || `task-${Math.random().toString(36).substr(2, 9)}`,
+        title: newTask.title,
+        description: newTask.description,
+        weightage: newTask.weightage,
+        status: "todo",
+        assignee: newTask.assignee,
+      };
+
+      setSprints(
+        sprints.map((sprint) => {
+          if (sprint.id === selectedSprintId) {
+            return {
+              ...sprint,
+              tasks: [...sprint.tasks, task],
+            };
+          }
+          return sprint;
+        }),
+      );
+
+      // Reset form
+      setNewTask({
+        title: "",
+        description: "",
+        weightage: 5,
+        sprintId: "",
+        assignee: "",
+      });
+      
+    } catch (error) {
+      console.error("Error creating task:", error);
+      alert("Failed to create task. Please try again.");
+    } finally {
+      setIsCreatingTask(false);
+    }
   }
 
-  const updateTaskStatus = (sprintId: string, taskId: string, status: "todo" | "in-progress" | "completed") => {
-    setSprints(
-      sprints.map((sprint) => {
-        if (sprint.id === sprintId) {
-          return {
-            ...sprint,
-            tasks: sprint.tasks.map((task) => {
-              if (task.id === taskId) {
-                return {
-                  ...task,
-                  status,
+  const updateTaskStatus = async (sprintId: string, taskId: string, status: "todo" | "in-progress" | "completed") => {
+    try {
+      // Update task in the API
+      const response = await fetch("http://127.0.0.1:5000/sprint/update_task_status", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          task_id: taskId,
+          status: status,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      // Update local state
+      setSprints(
+        sprints.map((sprint) => {
+          if (sprint.id === sprintId) {
+            return {
+              ...sprint,
+              tasks: sprint.tasks.map((task) => {
+                if (task.id === taskId) {
+                  return {
+                    ...task,
+                    status,
+                  };
                 }
-              }
-              return task
-            }),
+                return task;
+              }),
+            };
           }
-        }
-        return sprint
-      }),
-    )
+          return sprint;
+        }),
+      );
+      
+    } catch (error) {
+      console.error("Error updating task status:", error);
+      alert("Failed to update task status. Please try again.");
+    }
   }
+  
+  // Function to fetch tasks for a sprint
+  const fetchSprintTasks = async (sprintId: number) => {
+    setIsLoadingTasks(true);
+    try {
+      const response = await fetch(`http://127.0.0.1:5000/sprint/view_tasks?sprint_id=${sprintId}`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
-  const selectedSprint = sprints.find((sprint) => sprint.id === selectedSprintId)
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Sprint tasks:", data);
+
+      if (data.tasks && Array.isArray(data.tasks)) {
+        // Map API tasks to our Task type
+        const tasks: Task[] = data.tasks.map((apiTask: any) => ({
+          id: apiTask.task_id.toString(),
+          title: apiTask.title,
+          description: apiTask.description || "",
+          weightage: apiTask.weightage || 1,
+          status: apiTask.status.toLowerCase() || "todo",
+          assignee: apiTask.assignee || undefined,
+        }));
+
+        // Update the sprint with these tasks
+        setSprints(prev => 
+          prev.map(sprint => 
+            sprint.id === sprintId.toString() 
+              ? { ...sprint, tasks } 
+              : sprint
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching sprint tasks:", error);
+    } finally {
+      setIsLoadingTasks(false);
+    }
+  };
+
+  const selectedSprint = sprints.find((sprint) => sprint.id === selectedSprintId);
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-pink-500">Sprint Management</h1>
+        <h1 className="text-2xl font-bold text-pink-500">
+          {projectTitle ? `Sprint Management: ${projectTitle}` : 'Sprint Management'}
+        </h1>
 
         <Dialog>
           <DialogTrigger asChild>
@@ -254,8 +430,15 @@ export default function SprintManagement({project_id}: {project_id: number}) {
               <Button
                 onClick={handleAddSprint}
                 className="bg-gradient-to-r from-pink-500 to-blue-500 hover:from-pink-600 hover:to-blue-600"
+                disabled={isCreatingSprint}
               >
-                Create Sprint
+                {isCreatingSprint ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...
+                  </>
+                ) : (
+                  'Create Sprint'
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -264,71 +447,63 @@ export default function SprintManagement({project_id}: {project_id: number}) {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="md:col-span-1 space-y-4">
+          {/* Project Sprints Display (readonly) */}
           <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
-              <CardTitle>Sprints</CardTitle>
-              <CardDescription>Select a sprint to manage tasks</CardDescription>
+              <CardTitle>Project Sprints</CardTitle>
+              <CardDescription>Current active sprint is highlighted</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {sprints.map((sprint) => (
-                  <Button
-                    key={sprint.id}
-                    variant={selectedSprintId === sprint.id ? "default" : "outline"}
-                    className={cn(
-                      "w-full justify-start",
-                      selectedSprintId === sprint.id
-                        ? "bg-gradient-to-r from-pink-500 to-blue-500"
-                        : "bg-zinc-800 border-zinc-700",
-                    )}
-                    onClick={() => setSelectedSprintId(sprint.id)}
-                  >
-                    {sprint.name}
-                  </Button>
-                ))}
-              </div>
+              <ProjectSprints 
+                project_id={project_id}
+                onLatestSprintSelect={handleLatestSprintSelect}
+              />
             </CardContent>
           </Card>
 
-          {selectedSprint && (
+          {currentApiSprint && (
             <Card className="bg-zinc-900 border-zinc-800">
               <CardHeader>
-                <CardTitle>Sprint Details</CardTitle>
+                <CardTitle>Active Sprint</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <div className="flex items-center">
-                  <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span className="text-sm">
-                    {format(new Date(selectedSprint.startDate), "MMM d")} -{" "}
-                    {format(new Date(selectedSprint.endDate), "MMM d, yyyy")}
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <CheckCircle2 className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span className="text-sm">
-                    {selectedSprint.tasks.filter((t) => t.status === "completed").length} of{" "}
-                    {selectedSprint.tasks.length} tasks completed
-                  </span>
+                <div className="bg-zinc-800 p-3 rounded-md">
+                  <h3 className="font-medium text-pink-500">{currentApiSprint.name}</h3>
+                  
+                  {currentApiSprint.start_date && currentApiSprint.end_date && (
+                    <div className="flex items-center mt-2 text-sm text-gray-400">
+                      <Clock className="h-4 w-4 mr-2" />
+                      <span>
+                        {format(new Date(currentApiSprint.start_date), "MMM d")} - {format(new Date(currentApiSprint.end_date), "MMM d, yyyy")}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {selectedSprint && (
+                    <div className="flex items-center mt-2 text-sm">
+                      <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />
+                      <span>
+                        {selectedSprint.tasks.filter(t => t.status === "completed").length} of {selectedSprint.tasks.length} tasks completed
+                      </span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
           )}
-               <Card className="bg-zinc-900 border-zinc-800">
-              
-              <CardContent className="space-y-2">
-              
- 
-    <div className="mb-6">
-    <TeamMemberDropdown
-  projectId={project_id} // Your project ID
-  onSelect={(member) => console.log("Selected member:", member)}
-  label="Select Team Member"
-/>
-    </div>
-
-
-              </CardContent>
-            </Card>
+          
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader>
+              <CardTitle>Team Members</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <TeamMemberDropdown
+                projectId={project_id}
+                onSelect={(member) => console.log("Selected member:", member)}
+                label="Project Team Members"
+              />
+            </CardContent>
+          </Card>
         </div>
 
         <div className="md:col-span-3">
@@ -373,10 +548,10 @@ export default function SprintManagement({project_id}: {project_id: number}) {
                       </div>
                    
                       <TeamMemberDropdown
-  projectId={project_id} // Your project ID
-  onSelect={(member) => console.log("Selected member:", member)}
-  label="Select Team Member"
-/>
+                        projectId={project_id}
+                        onSelect={(member) => setNewTask({ ...newTask, assignee: member.name })}
+                        label="Assign To"
+                      />
 
                       <div className="space-y-2 mt-2">
                         <div className="flex justify-between">
@@ -397,172 +572,190 @@ export default function SprintManagement({project_id}: {project_id: number}) {
                         </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <label className="text-sm">Assign to Sprint</label>
-                        <Select
-                          value={newTask.sprintId || selectedSprintId}
-                          onValueChange={(value) => setNewTask({ ...newTask, sprintId: value })}
-                        >
-                          <SelectTrigger className="bg-zinc-800 border-zinc-700">
-                            <SelectValue placeholder="Select sprint" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {sprints.map((sprint) => (
-                              <SelectItem key={sprint.id} value={sprint.id}>
-                                {sprint.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      {/* Hidden this selection since we're always adding to the current sprint */}
+                      <input type="hidden" value={selectedSprintId} />
                     </div>
 
                     <DialogFooter>
                       <Button
                         onClick={handleAddTask}
                         className="bg-gradient-to-r from-pink-500 to-blue-500 hover:from-pink-600 hover:to-blue-600"
+                        disabled={isCreatingTask}
                       >
-                        Add Task
+                        {isCreatingTask ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...
+                          </>
+                        ) : (
+                          'Add Task'
+                        )}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <Card className="bg-zinc-900 border-zinc-800">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">To Do</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {selectedSprint.tasks
-                        .filter((task) => task.status === "todo")
-                        .map((task) => (
-                          <Card key={task.id} className="bg-zinc-800 border-zinc-700">
-                            <CardHeader className="p-3 pb-0">
-                              <div className="flex justify-between items-start">
-                                <CardTitle className="text-sm font-medium">{task.title}</CardTitle>
-                                <Badge variant="outline" className="ml-2 bg-zinc-700">
-                                  {task.weightage} pts
-                                </Badge>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="p-3 pt-2">
-                              <p className="text-xs text-muted-foreground mb-3">{task.description}</p>
-                              {task.assignee && (
-                                <div className="flex items-center">
-                                  <Users className="h-3 w-3 mr-1 text-muted-foreground" />
-                                  <span className="text-xs text-muted-foreground">{task.assignee}</span>
+              {isLoadingTasks ? (
+                <div className="flex items-center justify-center h-64 bg-zinc-900 rounded-lg border border-zinc-800">
+                  <div className="text-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-pink-500 mx-auto mb-3" />
+                    <p className="text-muted-foreground">Loading sprint tasks...</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <Card className="bg-zinc-900 border-zinc-800">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">To Do</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {selectedSprint.tasks
+                          .filter((task) => task.status === "todo")
+                          .map((task) => (
+                            <Card key={task.id} className="bg-zinc-800 border-zinc-700">
+                              <CardHeader className="p-3 pb-0">
+                                <div className="flex justify-between items-start">
+                                  <CardTitle className="text-sm font-medium">{task.title}</CardTitle>
+                                  <Badge variant="outline" className="ml-2 bg-zinc-700">
+                                    {task.weightage} pts
+                                  </Badge>
                                 </div>
-                              )}
-                            </CardContent>
-                            <CardFooter className="p-2 pt-0 flex justify-end">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 px-2 text-xs"
-                                onClick={() => updateTaskStatus(selectedSprint.id, task.id, "in-progress")}
-                              >
-                                <ArrowRight className="h-3 w-3 mr-1" /> Start
-                              </Button>
-                            </CardFooter>
-                          </Card>
-                        ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                              </CardHeader>
+                              <CardContent className="p-3 pt-2">
+                                <p className="text-xs text-muted-foreground mb-3">{task.description}</p>
+                                {task.assignee && (
+                                  <div className="flex items-center">
+                                    <Users className="h-3 w-3 mr-1 text-muted-foreground" />
+                                    <span className="text-xs text-muted-foreground">{task.assignee}</span>
+                                  </div>
+                                )}
+                              </CardContent>
+                              <CardFooter className="p-2 pt-0 flex justify-end">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-2 text-xs"
+                                  onClick={() => updateTaskStatus(selectedSprint.id, task.id, "in-progress")}
+                                >
+                                  <ArrowRight className="h-3 w-3 mr-1" /> Start
+                                </Button>
+                              </CardFooter>
+                            </Card>
+                          ))}
+                          
+                        {selectedSprint.tasks.filter((task) => task.status === "todo").length === 0 && (
+                          <div className="text-center py-6 text-muted-foreground text-sm">
+                            No tasks to do
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                <Card className="bg-zinc-900 border-zinc-800">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">In Progress</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {selectedSprint.tasks
-                        .filter((task) => task.status === "in-progress")
-                        .map((task) => (
-                          <Card key={task.id} className="bg-zinc-800 border-zinc-700">
-                            <CardHeader className="p-3 pb-0">
-                              <div className="flex justify-between items-start">
-                                <CardTitle className="text-sm font-medium">{task.title}</CardTitle>
-                                <Badge variant="outline" className="ml-2 bg-zinc-700">
-                                  {task.weightage} pts
-                                </Badge>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="p-3 pt-2">
-                              <p className="text-xs text-muted-foreground mb-3">{task.description}</p>
-                              {task.assignee && (
-                                <div className="flex items-center">
-                                  <Users className="h-3 w-3 mr-1 text-muted-foreground" />
-                                  <span className="text-xs text-muted-foreground">{task.assignee}</span>
+                  <Card className="bg-zinc-900 border-zinc-800">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">In Progress</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {selectedSprint.tasks
+                          .filter((task) => task.status === "in-progress")
+                          .map((task) => (
+                            <Card key={task.id} className="bg-zinc-800 border-zinc-700">
+                              <CardHeader className="p-3 pb-0">
+                                <div className="flex justify-between items-start">
+                                  <CardTitle className="text-sm font-medium">{task.title}</CardTitle>
+                                  <Badge variant="outline" className="ml-2 bg-zinc-700">
+                                    {task.weightage} pts
+                                  </Badge>
                                 </div>
-                              )}
-                            </CardContent>
-                            <CardFooter className="p-2 pt-0 flex justify-end">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 px-2 text-xs"
-                                onClick={() => updateTaskStatus(selectedSprint.id, task.id, "completed")}
-                              >
-                                <CheckCircle2 className="h-3 w-3 mr-1" /> Complete
-                              </Button>
-                            </CardFooter>
-                          </Card>
-                        ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                              </CardHeader>
+                              <CardContent className="p-3 pt-2">
+                                <p className="text-xs text-muted-foreground mb-3">{task.description}</p>
+                                {task.assignee && (
+                                  <div className="flex items-center">
+                                    <Users className="h-3 w-3 mr-1 text-muted-foreground" />
+                                    <span className="text-xs text-muted-foreground">{task.assignee}</span>
+                                  </div>
+                                )}
+                              </CardContent>
+                              <CardFooter className="p-2 pt-0 flex justify-end">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-2 text-xs"
+                                  onClick={() => updateTaskStatus(selectedSprint.id, task.id, "completed")}
+                                >
+                                  <CheckCircle2 className="h-3 w-3 mr-1" /> Complete
+                                </Button>
+                              </CardFooter>
+                            </Card>
+                          ))}
+                          
+                        {selectedSprint.tasks.filter((task) => task.status === "in-progress").length === 0 && (
+                          <div className="text-center py-6 text-muted-foreground text-sm">
+                            No tasks in progress
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                <Card className="bg-zinc-900 border-zinc-800">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Completed</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {selectedSprint.tasks
-                        .filter((task) => task.status === "completed")
-                        .map((task) => (
-                          <Card key={task.id} className="bg-zinc-800 border-zinc-700">
-                            <CardHeader className="p-3 pb-0">
-                              <div className="flex justify-between items-start">
-                                <CardTitle className="text-sm font-medium">{task.title}</CardTitle>
-                                <Badge variant="outline" className="ml-2 bg-zinc-700">
-                                  {task.weightage} pts
-                                </Badge>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="p-3 pt-2">
-                              <p className="text-xs text-muted-foreground mb-3">{task.description}</p>
-                              {task.assignee && (
-                                <div className="flex items-center">
-                                  <Users className="h-3 w-3 mr-1 text-muted-foreground" />
-                                  <span className="text-xs text-muted-foreground">{task.assignee}</span>
+                  <Card className="bg-zinc-900 border-zinc-800">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">Completed</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {selectedSprint.tasks
+                          .filter((task) => task.status === "completed")
+                          .map((task) => (
+                            <Card key={task.id} className="bg-zinc-800 border-zinc-700">
+                              <CardHeader className="p-3 pb-0">
+                                <div className="flex justify-between items-start">
+                                  <CardTitle className="text-sm font-medium">{task.title}</CardTitle>
+                                  <Badge variant="outline" className="ml-2 bg-zinc-700">
+                                    {task.weightage} pts
+                                  </Badge>
                                 </div>
-                              )}
-                            </CardContent>
-                            <CardFooter className="p-2 pt-0 flex justify-end">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 px-2 text-xs"
-                                onClick={() => updateTaskStatus(selectedSprint.id, task.id, "todo")}
-                              >
-                                <Circle className="h-3 w-3 mr-1" /> Reopen
-                              </Button>
-                            </CardFooter>
-                          </Card>
-                        ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                              </CardHeader>
+                              <CardContent className="p-3 pt-2">
+                                <p className="text-xs text-muted-foreground mb-3">{task.description}</p>
+                                {task.assignee && (
+                                  <div className="flex items-center">
+                                    <Users className="h-3 w-3 mr-1 text-muted-foreground" />
+                                    <span className="text-xs text-muted-foreground">{task.assignee}</span>
+                                  </div>
+                                )}
+                              </CardContent>
+                              <CardFooter className="p-2 pt-0 flex justify-end">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-2 text-xs"
+                                  onClick={() => updateTaskStatus(selectedSprint.id, task.id, "todo")}
+                                >
+                                  <Circle className="h-3 w-3 mr-1" /> Reopen
+                                </Button>
+                              </CardFooter>
+                            </Card>
+                          ))}
+                          
+                        {selectedSprint.tasks.filter((task) => task.status === "completed").length === 0 && (
+                          <div className="text-center py-6 text-muted-foreground text-sm">
+                            No completed tasks
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-64 bg-zinc-900 rounded-lg border border-zinc-800">
-              <p className="text-muted-foreground">Select a sprint to view and manage tasks</p>
+              <p className="text-muted-foreground">No sprints available. Create a sprint to start managing tasks.</p>
             </div>
           )}
         </div>

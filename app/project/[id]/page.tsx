@@ -10,7 +10,7 @@ import ProjectAnalytics from "@/components/project-analytics"
 
 export default function ProjectPage() {
   const params = useParams()
-  const projectId = parseInt(params.id as string)
+  const projectId = parseInt(params?.id as string)
   const [projectTitle, setProjectTitle] = useState<string>("")
   const [activeNav, setActiveNav] = useState("projects")
   

@@ -9,8 +9,7 @@ interface TeamMemberCardProps {
 }
 
 export default function TeamMemberCard({ member }: any) {
-  const { name, role, avatar, rating, skills, projects, email } = member
-
+  const { name, role, avatar, rating, tech_stack, projects, email } = member
   return (
     <Card className="bg-zinc-900 border-zinc-800 overflow-hidden">
       <div className="h-12 bg-gradient-to-r from-pink-500 to-blue-500" />
@@ -33,16 +32,21 @@ export default function TeamMemberCard({ member }: any) {
 
       <CardContent>
         <div className="space-y-4">
-          <div>
-            <p className="text-sm text-muted-foreground mb-2">Skills</p>
-            <div className="flex flex-wrap gap-1">
-              {skills.map((skill:any, index:number) => (
-                <Badge key={index} variant="outline" className="bg-zinc-800">
-                  {skill}
-                </Badge>
-              ))}
-            </div>
-          </div>
+        <div>
+  <p className="text-sm text-muted-foreground mb-2">Skills</p>
+  {Array.isArray(tech_stack) && tech_stack.length > 0 ? (
+    <div className="flex flex-wrap gap-1">
+      {tech_stack.map((skill: any, index: number) => (
+        <Badge key={index} variant="outline" className="bg-zinc-800">
+          {skill}
+        </Badge>
+      ))}
+    </div>
+  ) : (
+    <p className="text-sm text-zinc-500 italic">No skills listed</p>
+  )}
+</div>
+
 
           <div>
             <p className="text-sm text-muted-foreground mb-2">Projects</p>
