@@ -222,7 +222,7 @@ const id = 'sanjay23bcy51';
       });
       // Check for errors in the response
       if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
+       console.log("Error:", response.status);
       }
       // Parse the response data
       const data = await response.json();
