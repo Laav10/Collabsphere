@@ -1,6 +1,6 @@
 "use client";
 import type React from "react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,7 +72,7 @@ export default function CreateProjectForm({
       status: "Active", // Default status
       tags: techStack.join(","), // Using tech stack as tags
     };
- console.log(techStack.join(","))
+    console.log(techStack.join(","))
     try {
       // Make the API call using your existing API endpoint
       const response = await fetch("http://127.0.0.1:5000/add/project", {

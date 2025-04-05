@@ -58,7 +58,11 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
   const [sprints, setSprints] = useState<Sprint[]>([])
   const [selectedSprintId, setSelectedSprintId] = useState<string>("")
   const [currentApiSprint, setCurrentApiSprint] = useState<SprintFromAPI | null>(null)
-  
+  const {user } = useUserContext()  
+  const userlocal = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+  const parsedUser = userlocal ? JSON.parse(userlocal) : null;
+    const userId = user?.id ? user?.id:parsedUser?.id;
+    console.log("userId",userId)
   const [newSprint, setNewSprint] = useState({
     name: "",
     startDate: new Date(),
@@ -110,11 +114,13 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
       alert("Please enter a sprint name");
       return;
     }
+
+      // const id = user?.id ? user?.id:userlocal?.id;
     
+    const id = user?.id ? user?.id:userId;
     setIsCreatingSprint(true);
     
     try {
-      // Create sprint in the API
       const response = await fetch("http://127.0.0.1:5000/project/create_sprint", {
         method: "POST",
         credentials: "include",

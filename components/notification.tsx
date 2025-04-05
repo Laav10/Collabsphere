@@ -20,7 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 // Define the notification type
 interface Notification {
   id: number;
-  type: 'project_request' | 'application_status' | 'task_assigned';
+  type: 'project_request' |  'task_assigned';
   title: string;
   message: string;
   time: string;
@@ -61,34 +61,7 @@ const NotificationSystem: React.FC = () => {
       projectId: 'p2',
       userId: 'u2',
     },
-    {
-      id: 3,
-      type: 'application_status',
-      title: 'Application Update',
-      message: 'Your application to join "Mobile App Development" was accepted',
-      time: '3 hours ago',
-      read: true,
-      projectId: 'p3',
-    },
-    {
-      id: 4,
-      type: 'application_status',
-      title: 'Application Update',
-      message: 'Your application to join "Backend API Project" is pending review',
-      time: '1 day ago',
-      read: true,
-      projectId: 'p4',
-    },
-    {
-      id: 5,
-      type: 'task_assigned',
-      title: 'New Task Assigned',
-      message: 'You have been assigned "Create user authentication flow" in E-commerce Redesign',
-      time: '2 days ago',
-      read: false,
-      projectId: 'p1',
-      taskId: 't1',
-    },
+   
     {
       id: 6,
       type: 'task_assigned',
@@ -190,25 +163,7 @@ const NotificationSystem: React.FC = () => {
                 )}
               </TabsContent>
 
-              <TabsContent value="applications">
-                {notifications.filter((n) => n.type === 'application_status').length > 0 ? (
-                  notifications
-                    .filter((n) => n.type === 'application_status')
-                    .map((notification) => (
-                      <NotificationItem
-                        key={notification.id}
-                        notification={notification}
-                        onRead={handleNotificationRead}
-                        onAccept={handleAcceptRequest}
-                        onReject={handleRejectRequest}
-                      />
-                    ))
-                ) : (
-                  <div className="p-4 text-center text-gray-500">
-                    No application updates
-                  </div>
-                )}
-              </TabsContent>
+             
 
               <TabsContent value="requests">
                 {notifications.filter((n) => n.type === 'project_request').length > 0 ? (
@@ -256,8 +211,6 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
     switch (notification.type) {
       case 'project_request':
         return <Users className="text-blue-500" size={16} />;
-      case 'application_status':
-        return <Users className="text-green-500" size={16} />;
       case 'task_assigned':
         return <ClipboardList className="text-purple-500" size={16} />;
       default:

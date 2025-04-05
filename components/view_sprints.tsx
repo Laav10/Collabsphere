@@ -43,7 +43,7 @@ const ProjectSprints = ({ project_id, onLatestSprintSelect, label }: ProjectSpri
           }
         );
         if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
+      console.log("Error:", response.status);
         }
         
         const data = await response.json();
