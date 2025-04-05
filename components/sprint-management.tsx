@@ -189,8 +189,7 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
        newTask.assignee || null,
        project_id,
     )
-    const {user } = useUserContext()
-    const id = user?.id ? user?.id:'sanjay23bcy51';
+
     try {
       // Create task in the API
       const response = await fetch("http://127.0.0.1:5000/project/edit_tasks/add_task", {
@@ -206,7 +205,7 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
           points: newTask.weightage,
           assigned_to: newTask.assignee ,
           project_id: project_id,
-          user_id: id,
+          user_id: userId,
         }),
       });
 
