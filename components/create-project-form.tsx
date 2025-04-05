@@ -69,7 +69,7 @@ export default function CreateProjectForm({
       start_date: format(startDate, "yyyy-MM-dd"),
       end_date: format(endDate, "yyyy-MM-dd"),
       members_required: formData.membersRequired,
-      status: "Active", // Default status
+      status: "Planning", // Default status
       tags: techStack.join(","), // Using tech stack as tags
     };
     console.log(techStack.join(","))

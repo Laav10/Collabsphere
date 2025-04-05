@@ -220,14 +220,14 @@
                       </div>
                     </CardContent>
                     <CardFooter className="bg-gray-700 pt-4">
-                      {project.status === "Open" ? (
+                      {project.status === "Apply Now" ? (
                         <Button 
                           className="w-full bg-pink-500 hover:bg-pink-600"
                           onClick={() => handleApplyToProject(project.project_id)}
                         >
                           Apply Now
                         </Button>
-                      ) : project.status === "Applied" ? (
+                      ) : project.status === "Pending" ? (
                         <Button className="w-full bg-green-600 hover:bg-green-700" disabled>
                           Applied
                         </Button>

@@ -34,7 +34,7 @@ export default function NotificationBell() {
   const fetchNotifications = async () => {
     try {
       setLoading(true)
-      const response = await fetch("http://127.0.0.1:5000/project/notifications", {
+      const response = await fetch("http://127.0.0.1:5000/project/notification", {
         method: "GET",
         credentials: "include",
         headers: {
