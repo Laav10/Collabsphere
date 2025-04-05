@@ -125,7 +125,8 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
           project_id: project_id,
           name: newSprint.name,
           start_date: newSprint.startDate ,
-          end_date: newSprint.endDate
+          end_date: newSprint.endDate ,
+          user_id:id
         }),
       });
 

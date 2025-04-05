@@ -44,7 +44,13 @@ export default function SettingsPage() {
     tech_stack: [], // Initialize tech_stack as an empty array
   });
 const {user } = useUserContext()  
-const id = user?.id ? user?.id:'sanjay23bcy51';
+const userlocal = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+const parsedUser = userlocal ? JSON.parse(userlocal) : null;
+  const userId = user?.id ? user?.id:parsedUser?.id;
+  console.log("userId",userId)
+  // const id = user?.id ? user?.id:userlocal?.id;
+
+const id = user?.id ? user?.id:userId;
   const handleAddTech = () => {
     if (tech.trim() !== "") {
       setTechStack((prev) => [...prev, tech.trim()]);

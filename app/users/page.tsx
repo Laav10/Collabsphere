@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,6 @@ export default function TeamPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile[]>([]);
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -23,43 +21,66 @@ export default function TeamPage() {
             "Content-Type": "application/json",
           },
         });
-  
+
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
-  
-        const data: UserProfile[] = await response.json();
-        
-        // Fix the tech_stack by joining characters or processing them correctly
-        const processedData = data.map(user => ({
-          ...user,
 
-          // If tech_stack contains individual characters, join them or process as needed
-          // This is just an example approach - you might need to adjust based on your actual data
-          tech_stack: Array.isArray(user.tech_stack) ? 
-            [user.tech_stack.join("")] : // Join characters into a single skill
-            typeof user.tech_stack === 'string' ? 
-              [user.tech_stack] : // Handle if it's a string
-              [] // Fallback for undefined/null
+        const rawData = await response.json();
+        console.log("Raw API Response:", rawData); // Log raw API response for debugging
+
+        // Extract the 'projects' array from the raw data
+        const userData = Array.isArray(rawData?.projects)
+          ? rawData.projects
+          : [];
+
+        console.log("Normalized User Data:", userData); // Log normalized data
+
+        // Process the tech_stack field to ensure it's always an array
+        const processedData = userData.map((user: Partial<UserProfile>) => ({
+          email: user.email || "",
+          email_update: user.email_update || false,
+          github_profile: user.github_profile || "",
+          linkedin_profile: user.linkedin_profile || "",
+          name: user.name || "Unknown",
+          past_experience: user.past_experience || "",
+          project_count: user.project_count || 0,
+          project_update: user.project_update || false,
+          rating: user.rating || 0,
+          role_type: user.role_type || "",
+          roll_no: user.roll_no || 0,
+          tech_stack: Array.isArray(user.tech_stack)
+            ? user.tech_stack // Keep as is if already an array
+            : typeof user.tech_stack === "string"
+            ? [user.tech_stack] // Convert string to array with one element
+            : [], // Fallback for undefined/null
         }));
-        
-        console.log("Processed Data:", processedData);
-        setUserProfile(processedData);
+
+        console.log("Processed Data:", processedData); // Log processed data
+        setUserProfile(processedData); // Update state with processed data
       } catch (error) {
         console.error("Error fetching data:", error);
       }
     };
-  
     fetchData();
   }, []);
-
   // Get all unique skills from userProfile
   const allSkills = Array.from(
     new Set(userProfile.flatMap((member) => member.tech_stack))
   ).sort();
 
   // Filter team members based on search query and selected skills
-  const filteredMembers = userProfile.filter((member) => {
+  const filteredMembers = userProfile
+  .filter((member) => {
+    // Ensure all required fields exist
+    return (
+      member &&
+      typeof member.name === "string" &&
+      typeof member.role_type === "string" &&
+      Array.isArray(member.tech_stack)
+    );
+  })
+  .filter((member) => {
     const matchesSearch =
       searchQuery === "" ||
       member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -71,7 +92,6 @@ export default function TeamPage() {
 
     return matchesSearch && matchesSkills;
   });
-
   // Toggle a skill in the selectedSkills array
   const toggleSkill = (skill: string) => {
     setSelectedSkills((prevSkills) =>
@@ -80,21 +100,22 @@ export default function TeamPage() {
         : [...prevSkills, skill]
     );
   };
-// Define the UserProfile interface
-interface UserProfile {
-  email: string;
-  email_update: boolean;
-  github_profile: string;
-  linkedin_profile: string;
-  name: string;
-  past_experience: string;
-  project_count: number;
-  project_update: boolean;
-  rating: number;
-  role_type: string;
-  roll_no: number;
-  tech_stack: string[];
-}
+
+  // Define the UserProfile interface
+  interface UserProfile {
+    email: string;
+    email_update: boolean;
+    github_profile: string;
+    linkedin_profile: string;
+    name: string;
+    past_experience: string;
+    project_count: number;
+    project_update: boolean;
+    rating: number;
+    role_type: string;
+    roll_no: number;
+    tech_stack: string[];
+  }
 
   return (
     <div className="flex flex-col md:flex-row">
@@ -104,7 +125,6 @@ interface UserProfile {
           <h1 className="text-3xl font-bold text-pink-500 mb-8">
             Team Members
           </h1>
-
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-8">
             <div className="lg:col-span-1 space-y-6">
               {/* Search Section */}
