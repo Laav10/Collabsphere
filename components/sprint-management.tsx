@@ -58,11 +58,8 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
   const [sprints, setSprints] = useState<Sprint[]>([])
   const [selectedSprintId, setSelectedSprintId] = useState<string>("")
   const [currentApiSprint, setCurrentApiSprint] = useState<SprintFromAPI | null>(null)
-  const {user } = useUserContext()  
-  const userlocal = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
-  const parsedUser = userlocal ? JSON.parse(userlocal) : null;
-    const userId = user?.id ? user?.id:parsedUser?.id;
-    console.log("userId",userId)
+  const {user } = useUserContext()
+const id = user?.id ? user?.id:'sanjay23bcy51';
   const [newSprint, setNewSprint] = useState({
     name: "",
     startDate: new Date(),
@@ -116,8 +113,7 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
     }
 
       // const id = user?.id ? user?.id:userlocal?.id;
-    
-    const id = user?.id ? user?.id:userId;
+
     setIsCreatingSprint(true);
     
     try {
@@ -132,7 +128,7 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
           name: newSprint.name,
           start_date: newSprint.startDate ,
           end_date: newSprint.endDate ,
-          user_id:id
+          user_id: id,
         }),
       });
 
@@ -159,6 +155,7 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
         name: newSprint.name,
         start_date: format(newSprint.startDate, "yyyy-MM-dd"),
         end_date: format(newSprint.endDate, "yyyy-MM-dd"),
+        
       });
       
       // Reset form
@@ -166,6 +163,7 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
         name: "",
         startDate: new Date(),
         endDate: new Date(new Date().setDate(new Date().getDate() + 14)),
+        
       });
       
     } catch (error) {
