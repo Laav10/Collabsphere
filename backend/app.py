@@ -548,8 +548,22 @@ STATUS_MAPPING = {
     "In Progress": "review",
     "Completed": "done"
 }
+def has_project_access(user_id, project_id):
+    """Check if the user is an admin, mod, or mentor for a project in Firestore."""
+    try:
+        project_ref = db.collection("projects").document(project_id).get()
+        if project_ref.exists:
+            project_data = project_ref.to_dict()
+            return user_id in project_data.get("admins", []) or \
+                   user_id in project_data.get("moderators", []) or \
+                   user_id in project_data.get("mentors", [])
+        return False
+    except Exception as e:
+        print(f"Error checking user access: {e}")
+        return False
 @app.route('/project/edit_tasks/add_task', methods=['POST'])
 def add_task_route():
+
     """API endpoint to add a task to a sprint with access control."""
     data = request.json
     project_id = data.get("project_id")
@@ -558,28 +572,31 @@ def add_task_route():
     assigned_to = data.get("assigned_to")
     points = data.get("points")
     user_id = data.get("user_id")  
-    status = data.get("status", "To Do")  
+   # status = data.get("status", "To Do") 
+    status="To Do"
+    print(data,"lala",status) 
 
     if not all([project_id, sprint_number, description, assigned_to, points, user_id]):
         return jsonify({"error": "Missing required parameters"}), 400
 
-    if not has_project_access(user_id, project_id): 
-        return jsonify({"error": "Unauthorized"}), 403
+   # if not has_project_access(user_id, project_id): 
+       # return jsonify({"error": "Unauthorized"}), 403
     
     # **Check if Sprint is Open**
-    sprint_status = get_sprint_status(project_id, sprint_number)
-    if sprint_status != "open":
-        return jsonify({"error": "Cannot add task. Sprint is not open."}), 400
+   # sprint_status = get_sprint_status(project_id, sprint_number)
+    #if sprint_status != "open":
+     #   return jsonify({"error": "Cannot add task. Sprint is not open."}), 400
 
-    if status in STATUS_MAPPING:
-        status = STATUS_MAPPING[status]
-    else:
-        return jsonify({"error": "Invalid status value"}), 400
+    #if status in STATUS_MAPPING:
+    #   status = STATUS_MAPPING[status]
+   # else:
+   #     return jsonify({"error": "Invalid status value"}), 400
 
     try:
-        with engine.connect() as conn:
-            add_task(conn, project_id, sprint_number, description, assigned_to, points, status)
-        return jsonify({"message": "Task added successfully!"}), 201
+            
+         add_task(project_id, sprint_number, description, assigned_to, points, status)
+         return jsonify({"message": "Task added successfully!"}), 201
+      
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

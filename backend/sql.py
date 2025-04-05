@@ -1032,6 +1032,7 @@ LEFT JOIN projectapplication AS pa
 
 
 def notification_sql(data):
+ print(data,"sd")
  with engine.connect() as conn:
     result = conn.execute(text("""
     SELECT * 
@@ -1318,7 +1319,7 @@ def get_project_analytics(project_id):
         traceback.print_exc()  
         return None
 
-def add_task(project_id, sprint_number, description, assigned_to, points):
+def add_task(project_id, sprint_number, description, assigned_to, points,status):
     """Insert a new task into the 'task' table."""
     try:
         with engine.connect() as conn:
@@ -1330,7 +1331,8 @@ def add_task(project_id, sprint_number, description, assigned_to, points):
                 "sprint_number": sprint_number,
                 "description": description,
                 "assigned_to": assigned_to,
-                "points": points
+                "points": points,
+                "status": status
             })
             conn.commit()
         return True, "Task added successfully"
@@ -1462,18 +1464,18 @@ def get_sprint_status(project_id, sprint_number):
         return result[0] if result else None 
 
     
-def add_task(project_id, sprint_number, description, assigned_to, points):
-    try:
-        with engine.connect() as conn:
-            conn.execute(text("""
-                INSERT INTO task (project_id, sprint_number, description, assigned_to, status, points)
-                VALUES (:project_id, :sprint_number, :description, :assigned_to, 'pending', :points)
-            """), {"project_id": project_id, "sprint_number": sprint_number, "description": description, "assigned_to": assigned_to, "points": points})
-            conn.commit()
-        return True
-    except Exception as e:
-        print(f"Error adding task: {e}")
-        return False
+#def add_task(project_id, sprint_number, description, assigned_to, points,):
+   # try:
+        #with engine.connect() as conn:
+        #    conn.execute(text("""
+        #        INSERT INTO task (project_id, sprint_number, description, assigned_to, status, points)
+        #        VALUES (:project_id, :sprint_number, :description, :assigned_to, 'pending', :points)
+        #    """), {"project_id": project_id, "sprint_number": sprint_number, "description": description, "assigned_to": assigned_to, "points": points})
+       #     conn.commit()
+      #  return True
+   # except Exception as e:
+   #     print(f"Error adding task: {e}")
+   #     return False
 
 def get_sprints(project_id):
     try:
