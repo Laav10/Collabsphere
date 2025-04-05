@@ -49,7 +49,7 @@ export default function NotificationBell() {
         },
       }).catch(() => {
         // This will catch network errors specifically for the test request
-        throw new Error("Cannot connect to the server. Is it running?")
+        console.log("Server is not reachable")
       })
       
       const response = await fetch("http://127.0.0.1:5000/project/notification", {
@@ -64,7 +64,7 @@ export default function NotificationBell() {
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`)
+        console.log("Response not OK:", response) 
       }
 
       const data = await response.json()

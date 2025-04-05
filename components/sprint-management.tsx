@@ -24,7 +24,6 @@ import TeamMemberDropdown from "@/components/team-members"
 import ProjectSprints from "@/components/view_sprints"
 import { useUserContext } from "@/lib/usercontext"
 
-
 interface SprintManagementProps {
   project_id: number;
   projectTitle?: string;
@@ -47,7 +46,7 @@ type Task = {
 }
 
 type Sprint = {
-  id: string
+  id: number  // Changed from string to number
   name: string
   startDate: Date
   endDate: Date
@@ -56,13 +55,29 @@ type Sprint = {
 
 export default function SprintManagement({ project_id, projectTitle }: SprintManagementProps) {
   const [sprints, setSprints] = useState<Sprint[]>([])
-  const [selectedSprintId, setSelectedSprintId] = useState<string>("")
+  const [selectedSprintId, setSelectedSprintId] = useState<number | null>(null)
   const [currentApiSprint, setCurrentApiSprint] = useState<SprintFromAPI | null>(null)
- const {user } = useUserContext()  
- const userlocal = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
- const parsedUser = userlocal ? JSON.parse(userlocal) : null;
-   const userId = user?.id ? user?.id:parsedUser?.id;
-   console.log("userId",userId)
+  const { user } = useUserContext()  
+  
+  // Get user ID from localStorage or context
+  const getUserIdFromStorage = () => {
+    if (typeof window !== 'undefined') {
+      const userlocal = localStorage.getItem('user');
+      if (userlocal) {
+        try {
+          const parsedUser = JSON.parse(userlocal);
+          return parsedUser?.id;
+        } catch (e) {
+          console.error("Error parsing user from localStorage:", e);
+          return null;
+        }
+      }
+    }
+    return null;
+  };
+  
+  const userId = user?.id ? user.id : getUserIdFromStorage();
+  
   const [newSprint, setNewSprint] = useState({
     name: "",
     startDate: new Date(),
@@ -84,17 +99,17 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
   // Handle the latest sprint selected from ProjectSprints component
   const handleLatestSprintSelect = (sprint: SprintFromAPI) => {
     console.log("Latest sprint from API:", sprint);
-    //setCurrentApiSprint(sprint);
     
     // Check if this sprint already exists in our local state
-    const existingSprint = sprints.find(s => s.id === sprint.sprint_id.toString());
+    const existingSprint = sprints.find(s => s.id === sprint.sprint_id);
     
     if (existingSprint) {
       setSelectedSprintId(existingSprint.id);
+      setCurrentApiSprint(sprint);
     } else {
       // Create a new sprint object from the API data
       const newSprint: Sprint = {
-        id: sprint.sprint_id.toString(),
+        id: sprint.sprint_id,  // Directly use number
         name: sprint.name,
         startDate: sprint.start_date ? new Date(sprint.start_date) : new Date(),
         endDate: sprint.end_date ? new Date(sprint.end_date) : new Date(new Date().setDate(new Date().getDate() + 14)),
@@ -102,7 +117,8 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
       };
       
       setSprints(prev => [...prev, newSprint]);
-      setSelectedSprintId(newSprint.id);
+      setSelectedSprintId(sprint.sprint_id);
+      setCurrentApiSprint(sprint);
       
       // Fetch tasks for this sprint
       fetchSprintTasks(sprint.sprint_id);
@@ -114,9 +130,19 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
       alert("Please enter a sprint name");
       return;
     }
+    
+    if (!userId) {
+      alert("User ID is required to create a sprint");
+      return;
+    }
+    
     setIsCreatingSprint(true);
     
     try {
+      // Format dates properly for API
+      const startDateStr = format(newSprint.startDate, "yyyy-MM-dd");
+      const endDateStr = format(newSprint.endDate, "yyyy-MM-dd");
+      
       const response = await fetch("http://127.0.0.1:5000/project/create_sprint", {
         method: "POST",
         credentials: "include",
@@ -126,8 +152,8 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
         body: JSON.stringify({
           project_id: project_id,
           name: newSprint.name,
-          start_date: newSprint.startDate ,
-          end_date: newSprint.endDate ,
+          start_date: startDateStr,  // Use formatted string
+          end_date: endDateStr,      // Use formatted string
           user_id: userId,
         }),
       });
@@ -139,9 +165,13 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
       const data = await response.json();
       console.log("Sprint created:", data);
 
+      if (!data.sprint_id) {
+        throw new Error("No sprint_id returned from API");
+      }
+
       // Add to local state
       const sprint: Sprint = {
-        id: data.sprint_id.toString(),
+        id: data.sprint_id,  // Use as number
         name: newSprint.name,
         startDate: newSprint.startDate,
         endDate: newSprint.endDate,
@@ -149,13 +179,12 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
       };
 
       setSprints(prev => [...prev, sprint]);
-      setSelectedSprintId(sprint.id);
+      setSelectedSprintId(data.sprint_id);
       setCurrentApiSprint({
         sprint_id: data.sprint_id,
         name: newSprint.name,
-        start_date: format(newSprint.startDate, "yyyy-MM-dd"),
-        end_date: format(newSprint.endDate, "yyyy-MM-dd"),
-        
+        start_date: startDateStr,
+        end_date: endDateStr,
       });
       
       // Reset form
@@ -163,7 +192,6 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
         name: "",
         startDate: new Date(),
         endDate: new Date(new Date().setDate(new Date().getDate() + 14)),
-        
       });
       
     } catch (error) {
@@ -180,16 +208,13 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
       return;
     }
     
+    if (!userId) {
+      alert("User ID is required to create a task");
+      return;
+    }
+    
     setIsCreatingTask(true);
-    console.log(
-       selectedSprintId,
-       newTask.title,
-       newTask.description,
-       newTask.weightage,
-       newTask.assignee || null,
-       project_id, "line 190"
-    )
-
+    
     try {
       // Create task in the API
       const response = await fetch("http://127.0.0.1:5000/project/edit_tasks/add_task", {
@@ -203,7 +228,7 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
           title: newTask.title,
           description: newTask.description,
           points: newTask.weightage,
-          assigned_to: newTask.assignee ,
+          assigned_to: newTask.assignee || null,
           project_id: project_id,
           user_id: userId,
         }),
@@ -255,7 +280,12 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
     }
   }
 
-  const updateTaskStatus = async (sprintId: string, taskId: string, status: "todo" | "in-progress" | "completed") => {
+  const updateTaskStatus = async (sprintId: number, taskId: string, status: "todo" | "in-progress" | "completed") => {
+    if (!userId) {
+      alert("User ID is required to update task status");
+      return;
+    }
+    
     try {
       // Update task in the API
       const response = await fetch("http://127.0.0.1:5000/sprint/update_task_status", {
@@ -267,6 +297,7 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
         body: JSON.stringify({
           task_id: taskId,
           status: status,
+          user_id: userId,
         }),
       });
 
@@ -334,7 +365,7 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
         // Update the sprint with these tasks
         setSprints(prev => 
           prev.map(sprint => 
-            sprint.id === sprintId.toString() 
+            sprint.id === sprintId
               ? { ...sprint, tasks } 
               : sprint
           )
@@ -577,7 +608,7 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
                       </div>
 
                       {/* Hidden this selection since we're always adding to the current sprint */}
-                      <input type="hidden" value={selectedSprintId} />
+                      <input type="hidden" value={selectedSprintId || ''} />
                     </div>
 
                     <DialogFooter>
