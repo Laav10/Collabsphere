@@ -1674,6 +1674,19 @@ def get_last_sprint_status(project_id):
             ORDER BY sprint_id DESC LIMIT 1
         """), {"project_id": project_id}).fetchone()
         return result[0] if result else "closed"
+    
+def is_admin_or_mod(user_id, project_id):
+    """Check if the user is an admin or moderator of the project."""
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(text("""
+                SELECT role FROM projectmembers
+                WHERE project_id = :project_id AND member_id = :user_id
+            """), {"project_id": project_id, "user_id": user_id}).fetchone()
+            return result and result[0] in ["admin", "moderator"]
+    except Exception as e:
+        print(f"Error checking admin/mod status: {e}")
+        return False
 
 def create_sprint(user_id, project_id, name, start_date, end_date):
     """Create a new sprint only if the previous one is completed and the user is an admin/mod."""

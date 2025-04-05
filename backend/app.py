@@ -92,7 +92,7 @@ def transform_email(username):
 @app.route('/verify/google', methods=['POST'])
 def verify():
     #new sign in
-    time.sleep(2)  # Add a 2-second delay before verifying
+    time.sleep(5)  # Add a 2-second delay before verifying
 
     data = request.json
     id_token = data.get("idToken")
