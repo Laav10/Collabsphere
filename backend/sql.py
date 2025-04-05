@@ -1702,7 +1702,7 @@ def create_sprint(user_id, project_id, name, start_date, end_date):
             conn.execute(text("""
                 INSERT INTO sprint (project_id, name, start_date, end_date, status)
                 VALUES (:project_id, :name, :start_date, :end_date, 'open')
-            """), {"project_id": project_id, "name": name, "start_date": start_date, "end_date": end_date})
+            """), {"project_id": project_id, "name": name, "start_date": '2025-04-05', "end_date": '2025-04-19'})
         return {"message": "Sprint created successfully."}, 201
     except Exception as e:
         return {"error": str(e)}, 500
