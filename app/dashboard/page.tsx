@@ -33,9 +33,15 @@
       const [projects, setProjects] = useState<Project[]>([])
       const [loading, setLoading] = useState(true)
       const [error, setError] = useState<string | null>(null)
-      const {user } = useUserContext()
-      const id = user?.id ? user?.id:'sanjay23bcy51';
-      console.log(user?.id)
+
+ const {user } = useUserContext()  
+ const userlocal = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+ const parsedUser = userlocal ? JSON.parse(userlocal) : null;
+   const userId = user?.id ? user?.id:parsedUser?.id;
+   console.log("userId",userId)
+   // const id = user?.id ? user?.id:userlocal?.id;
+ 
+ const id = 'sanjay23bcy51' // Replace with actual user ID;
       // Fetch projects from the API
       useEffect(() => {
         const fetchProjects = async () => {

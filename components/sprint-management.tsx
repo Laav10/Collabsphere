@@ -58,8 +58,11 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
   const [sprints, setSprints] = useState<Sprint[]>([])
   const [selectedSprintId, setSelectedSprintId] = useState<string>("")
   const [currentApiSprint, setCurrentApiSprint] = useState<SprintFromAPI | null>(null)
-  const {user } = useUserContext()
-const id = user?.id ? user?.id:'sanjay23bcy51';
+ const {user } = useUserContext()  
+ const userlocal = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+ const parsedUser = userlocal ? JSON.parse(userlocal) : null;
+   const userId = user?.id ? user?.id:parsedUser?.id;
+   console.log("userId",userId)
   const [newSprint, setNewSprint] = useState({
     name: "",
     startDate: new Date(),
@@ -125,7 +128,7 @@ const id = user?.id ? user?.id:'sanjay23bcy51';
           name: newSprint.name,
           start_date: newSprint.startDate ,
           end_date: newSprint.endDate ,
-          user_id: id,
+          user_id: userId,
         }),
       });
 

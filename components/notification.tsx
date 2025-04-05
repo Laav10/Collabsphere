@@ -22,24 +22,37 @@ interface Notification {
   role: string
   status: "Pending" | "Accepted" | "Rejected"
   title: string
-  user_id: number
+  user_id: string
+  username?: string // Username of the requesting user
+  admin_name?: string // Name of admin who sent the invitation
 }
 
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
   const { user } = useUserContext()
+  
+  const userlocal = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+  const parsedUser = userlocal ? JSON.parse(userlocal) : null;
+  const userId = user?.id ? user?.id : parsedUser?.id;
+  console.log("userId", userId)
 
   const fetchNotifications = async () => {
     try {
       setLoading(true)
-      const response = await fetch("http://127.0.0.1:5000/project/notification", {
-        method: "GET",
+      setError(null)
+      
+      const response = await fetch("http://127.0.0.1:5000/notification", {
+        method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          user_id: userId,
+        }),
       })
 
       if (!response.ok) {
@@ -51,9 +64,32 @@ export default function NotificationBell() {
       
       if (data.notification && Array.isArray(data.notification)) {
         setNotifications(data.notification)
+      } else {
+        console.warn("Unexpected data structure:", data)
+        setNotifications([])
       }
     } catch (error) {
       console.error("Error fetching notifications:", error)
+      setError(error instanceof Error ? error.message : "Failed to load notifications")
+      
+      // For development: Use mock data if API fails
+      if (process.env.NODE_ENV === 'development') {
+        setNotifications([
+          {
+            application_id: 13,
+            applied: "user",
+            applied_at: "2025-04-02T18:17:00.583870",
+            project_id: 1,
+            remarks: "Interested in frontend development",
+            role: "member",
+            status: "Pending",
+            title: "Web App Development",
+            user_id: 'sanjay23bcy51',
+            username: "John Doe"
+          },
+       
+        ])
+      }
     } finally {
       setLoading(false)
     }
@@ -62,23 +98,29 @@ export default function NotificationBell() {
   useEffect(() => {
     fetchNotifications()
 
-    // Set up polling for notifications every 30 seconds
-    const intervalId = setInterval(fetchNotifications, 30000)
+    // Set up polling for notifications every minute
+    const intervalId = setInterval(fetchNotifications, 60000)
     
     return () => clearInterval(intervalId)
-  }, [])
+  }, [userId]) 
 
-  const handleAcceptRequest = async (applicationId: number, accept: boolean) => {
+  const handleAcceptRequest = async (user_id:string, accept: boolean  , project_id:number) => {
     try {
-      const response = await fetch("http://127.0.0.1:5000/project/response", {
+      setLoading(true)
+      console.log( accept ,user_id,project_id)
+      console.log(user_id ,"line 110")
+      // Updated API endpoint and payload structure
+      const response = await fetch("http://127.0.0.1:5000/update/project/app/status", {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          application_id: applicationId,
+
           status: accept ? "Accepted" : "Rejected",
+          user_id: user_id,
+          project_id: project_id
         }),
       })
 
@@ -86,14 +128,25 @@ export default function NotificationBell() {
         throw new Error(`HTTP error! Status: ${response.status}`)
       }
 
-      // Update the notifications list after accepting/rejecting
-      fetchNotifications()
+      const data = await response.json()
+      
+      // Optimistically update the UI
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.user_id === user_id
+            ? { ...notification, status: accept ? "Accepted" : "Rejected" }
+            : notification
+        )
+      )
       
       // Show success message
       alert(accept ? "Request accepted successfully!" : "Request rejected.")
+      
     } catch (error) {
       console.error("Error processing request:", error)
       alert("Failed to process the request. Please try again.")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -124,6 +177,18 @@ export default function NotificationBell() {
         {loading ? (
           <div className="p-4 text-center text-zinc-400">
             Loading notifications...
+          </div>
+        ) : error ? (
+          <div className="p-4 text-center">
+            <p className="text-red-400 mb-2">{error}</p>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="text-xs"
+              onClick={fetchNotifications}
+            >
+              Retry
+            </Button>
           </div>
         ) : notifications.length === 0 ? (
           <div className="p-4 text-center text-zinc-400">
@@ -159,9 +224,13 @@ export default function NotificationBell() {
                   
                   <p className="text-xs text-zinc-400 mb-2">
                     {notification.applied === "admin" ? (
-                      <>You have been invited to join <span className="text-pink-500">{notification.title}</span> as {notification.role}</>
+                      <>
+                        <span className="text-pink-500">{notification.admin_name || "An admin"}</span> invited you to join <span className="text-pink-500">{notification.title}</span> as {notification.role}
+                      </>
                     ) : (
-                      <>Request to join <span className="text-pink-500">{notification.title}</span> as {notification.role}</>
+                      <>
+                        <span className="text-pink-500">{notification.username || "A user"}</span> requested to join <span className="text-pink-500">{notification.title}</span> as {notification.role}
+                      </>
                     )}
                   </p>
                   
@@ -178,29 +247,23 @@ export default function NotificationBell() {
                     
                     {notification.status === "Pending" && (
                       <div className="flex gap-2">
-                        {/* Show accept/reject buttons based on who applied */}
-                        {(notification.applied === "user" ) || 
-                        (notification.applied === "admin" ) ? (
-                          <>
-                            <Button 
-                              size="sm" 
-                              variant="ghost"
-                              className="h-7 px-2 py-1 text-xs text-red-500 hover:bg-red-500/10 hover:text-red-500"
-                              onClick={() => handleAcceptRequest(notification.application_id, false)}
-                            >
-                              <X className="h-3 w-3 mr-1" /> Reject
-                            </Button>
-                            <Button 
-                              size="sm"
-                              className="h-7 px-2 py-1 text-xs bg-pink-600 hover:bg-pink-700"
-                              onClick={() => handleAcceptRequest(notification.application_id, true)}
-                            >
-                              <Check className="h-3 w-3 mr-1" /> Accept
-                            </Button>
-                          </>
-                        ) : (
-                          <Badge variant="outline" className="text-xs">Awaiting response</Badge>
-                        )}
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          className="h-7 px-2 py-1 text-xs text-red-500 hover:bg-red-500/10 hover:text-red-500"
+                          onClick={() => handleAcceptRequest(notification.user_id, false , notification.project_id)}
+                          disabled={loading}
+                        >
+                          <X className="h-3 w-3 mr-1" /> Reject
+                        </Button>
+                        <Button 
+                          size="sm"
+                          className="h-7 px-2 py-1 text-xs bg-pink-600 hover:bg-pink-700"
+                          onClick={() => handleAcceptRequest(notification.user_id, true ,notification.project_id)}
+                          disabled={loading}
+                        >
+                          <Check className="h-3 w-3 mr-1" /> Accept
+                        </Button>
                       </div>
                     )}
                   </div>

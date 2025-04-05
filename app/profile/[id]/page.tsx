@@ -50,7 +50,7 @@ const parsedUser = userlocal ? JSON.parse(userlocal) : null;
   console.log("userId",userId)
   // const id = user?.id ? user?.id:userlocal?.id;
 
-const id = user?.id ? user?.id:userId;
+const id = 'sanjay23bcy51';
   const handleAddTech = () => {
     if (tech.trim() !== "") {
       setTechStack((prev) => [...prev, tech.trim()]);
