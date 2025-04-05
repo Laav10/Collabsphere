@@ -22,7 +22,7 @@ interface Notification {
   role: string
   status: "Pending" | "Accepted" | "Rejected"
   title: string
-  user_id: string
+  user_id: number
   username?: string // Username of the requesting user
   admin_name?: string // Name of admin who sent the invitation
 }
@@ -84,10 +84,9 @@ export default function NotificationBell() {
             role: "member",
             status: "Pending",
             title: "Web App Development",
-            user_id: 'sanjay23bcy51',
+            user_id: 2,
             username: "John Doe"
           },
-       
         ])
       }
     } finally {
@@ -104,23 +103,22 @@ export default function NotificationBell() {
     return () => clearInterval(intervalId)
   }, [userId]) 
 
-  const handleAcceptRequest = async (user_id:string, accept: boolean  , project_id:number) => {
+  const handleAcceptRequest = async (applicationId: number, accept: boolean) => {
     try {
       setLoading(true)
-      console.log( accept ,user_id,project_id)
-      console.log(user_id ,"line 110")
+      
       // Updated API endpoint and payload structure
-      const response = await fetch("http://127.0.0.1:5000/update/project/app/status", {
+      const response = await fetch("http://127.0.0.1:5000/update/project/status", {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-
+          application_id: applicationId,
           status: accept ? "Accepted" : "Rejected",
-          user_id: user_id,
-          project_id: project_id
+          user_id: userId,
+          project_id: notifications.find(n => n.application_id === applicationId)?.project_id
         }),
       })
 
@@ -133,7 +131,7 @@ export default function NotificationBell() {
       // Optimistically update the UI
       setNotifications(prev => 
         prev.map(notification => 
-          notification.user_id === user_id
+          notification.application_id === applicationId
             ? { ...notification, status: accept ? "Accepted" : "Rejected" }
             : notification
         )
@@ -251,7 +249,7 @@ export default function NotificationBell() {
                           size="sm" 
                           variant="ghost"
                           className="h-7 px-2 py-1 text-xs text-red-500 hover:bg-red-500/10 hover:text-red-500"
-                          onClick={() => handleAcceptRequest(notification.user_id, false , notification.project_id)}
+                          onClick={() => handleAcceptRequest(notification.application_id, false)}
                           disabled={loading}
                         >
                           <X className="h-3 w-3 mr-1" /> Reject
@@ -259,7 +257,7 @@ export default function NotificationBell() {
                         <Button 
                           size="sm"
                           className="h-7 px-2 py-1 text-xs bg-pink-600 hover:bg-pink-700"
-                          onClick={() => handleAcceptRequest(notification.user_id, true ,notification.project_id)}
+                          onClick={() => handleAcceptRequest(notification.application_id, true)}
                           disabled={loading}
                         >
                           <Check className="h-3 w-3 mr-1" /> Accept
