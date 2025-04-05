@@ -111,9 +111,6 @@ const id = user?.id ? user?.id:'sanjay23bcy51';
       alert("Please enter a sprint name");
       return;
     }
-
-      // const id = user?.id ? user?.id:userlocal?.id;
-
     setIsCreatingSprint(true);
     
     try {
