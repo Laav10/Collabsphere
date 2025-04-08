@@ -97,10 +97,7 @@ const GoogleLogin = () => {
       const data = await response.json();
       console.log("Server Response:", data);
       console.log(response.ok , "allowed ")
-      
-      // ✅ Navigate to dashboard if successful
       if (response.ok) {
-        // Update UserContext with user data
         setUser({
           id: data.roll_no,
          
