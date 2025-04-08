@@ -2,6 +2,8 @@ import firebase_admin
 from firebase_admin import credentials, auth,firestore
 from flask import Flask, request, jsonify,make_response
 from flask_cors import CORS  # Import CORS
+from flask_cors import cross_origin
+
 import time
 from data_valid import UserSchema,add_project_schema,first_login_schema,list_of_mentors_schema,apply_mentors_schema,apply_mentors_status_takeback_schema
 from data_valid import accept_mentor_schema,apply_project_schema,apply_project_status_schema,list_apply_project_schema,list_projects_scheme
@@ -154,7 +156,7 @@ def verify():
             max_age=60*60*24*3,  # 7 days expiration
             
             )
-         #   user_insert_google_sql(data)
+            user_insert_google_sql(data)
 
            # print(response.headers)
             return response
@@ -465,6 +467,11 @@ def verify_member():
  data=request.json
  return member_sql(data)
 
+@app.route('/change/sprint/status',methods=['POST'])
+def change_sprint_status():
+ data=request.json
+ return change_sprint_status_sql(data)
+
 
 #laavanya
 
@@ -566,6 +573,7 @@ def add_task_route():
 
     """API endpoint to add a task to a sprint with access control."""
     data = request.json
+    print(data)
     project_id = data.get("project_id")
     sprint_number = data.get("sprint_number")
     description = data.get("description")
@@ -580,30 +588,73 @@ def add_task_route():
         return jsonify({"error": "Missing required parameters"}), 400
 
    # if not has_project_access(user_id, project_id): 
-       # return jsonify({"error": "Unauthorized"}), 403
+      # return jsonify({"error": "Unauthorized"}), 403
     
     # **Check if Sprint is Open**
-   # sprint_status = get_sprint_status(project_id, sprint_number)
-    #if sprint_status != "open":
-     #   return jsonify({"error": "Cannot add task. Sprint is not open."}), 400
+    sprint_status = get_sprint_status(project_id, sprint_number)
+    if  sprint_status != "open":
+                return jsonify({"error": "Cannot add task. Sprint is not open."}), 400
 
-    #if status in STATUS_MAPPING:
-    #   status = STATUS_MAPPING[status]
-   # else:
-   #     return jsonify({"error": "Invalid status value"}), 400
+    if status in STATUS_MAPPING:
+       status = STATUS_MAPPING[status]
+    else:
+        return jsonify({"error": "Invalid status value"}), 400
 
     try:
-            
          add_task(project_id, sprint_number, description, assigned_to, points, status)
          return jsonify({"message": "Task added successfully!"}), 201
       
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/project/edit_tasks/update_task_status', methods=['POST','OPTIONS'])
+@cross_origin(origins="http://localhost:3000", supports_credentials=True)
+
+def update_task_routes():
+    data = request.json
+    print(data)
+    task_id = data.get("task_id")
+
+    if not task_id:
+        return jsonify({"error": "Missing required parameter: task_id"}), 400
+
+   # allowed_fields = ["description", "assigned_to", "status", "points"]
+    #updates = {key: data[key] for key in data if key in allowed_fields}
+
+  #  if not updates:
+     #   return jsonify({"error": "No fields provided to update"}), 400
+
+   # if "status" in updates and updates["status"] in STATUS_MAPPING:
+       # updates["status"] = STATUS_MAPPING[updates["status"]]
+    status=STATUS_MAPPING[data["status"]]
+    try:
+        with engine.connect() as conn:
+            print(f"Checking if task {task_id} exists...")  
+            result = conn.execute(
+                text("SELECT COUNT(*) FROM task WHERE id = :task_id"),
+                {"task_id": task_id}
+            ).scalar()
+
+            if result == 0:
+                return jsonify({"error": "Task ID does not exist"}), 404
+
+        
+        success = update_task_status(task_id, status)
+        if success:
+            return jsonify({"message": "Task updated successfully!"}), 200
+        else:
+            return jsonify({"error": "Failed to update task"}), 500
+
+    except Exception as e:
+        print(f"Database Error: {str(e)}")  
+        return jsonify({"error": str(e)}), 500
 #6
-@app.route('/project/edit_tasks/update_task', methods=['POST'])
+@app.route('/project/edit_tasks/update_task', methods=['POST','OPTIONS'])
+@cross_origin(origins="http://localhost:3000", supports_credentials=True)
+
 def update_task_route():
     data = request.json
+    print(data)
     task_id = data.get("task_id")
 
     if not task_id:
@@ -611,7 +662,7 @@ def update_task_route():
 
     allowed_fields = ["description", "assigned_to", "status", "points"]
     updates = {key: data[key] for key in data if key in allowed_fields}
-
+ 
     if not updates:
         return jsonify({"error": "No fields provided to update"}), 400
 

@@ -1108,6 +1108,48 @@ def member_sql(data):
         
         else:
             return jsonify({"member":"no"}), 401
+        
+def change_sprint_status_sql(data):
+    #check for particular project and sprint
+
+    try:
+        # Check if all task are done or not
+        with engine.connect() as conn:
+            result = conn.execute(text("""
+               select * from sprint where project_id=:project_id and sprint_number=:sprint_id  and status not in 'done'
+                                        
+            """), {
+               
+                "project_id": data["project_id"],
+                "sprint_id": data["sprint_id"]
+               
+            })
+            conn.commit()
+            if result.scalar > 0:
+                return jsonify({"sprint": "complete previous"}), 404
+
+
+
+
+        with engine.connect() as conn:
+            result = conn.execute(text("""
+                UPDATE sprint 
+                SET status = :status
+                WHERE project_id = :project_id AND sprint_id = :sprint_id;
+            """), {
+                "status": data["status"],
+                "project_id": data["project_id"],
+                "sprint_id": data["sprint_id"]
+            })
+            conn.commit()
+
+            if result.rowcount == 0:
+                return jsonify({"error": "Sprint not found"}), 404
+
+            return jsonify({"sprint": "updated"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
      
 
 
