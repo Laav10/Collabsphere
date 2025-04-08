@@ -28,7 +28,7 @@ interface ApiResponse {
 
 interface ProjectTasksProps {
   projectId: number;
-  sprintId?: string;
+  sprint_id?: number;
 }
 
 // Task Card Component with status change buttons
@@ -121,7 +121,8 @@ export const TaskCard = ({ task, status, onStatusChange }: {
   );
 };
 
-const ProjectTasks = ({ projectId, sprintId }: ProjectTasksProps) => {
+const ProjectTasks = ({ projectId, sprint_id }: ProjectTasksProps) => {
+  console.log("Project ID:", sprint_id);
   const [tasksData, setTasksData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -132,8 +133,8 @@ const ProjectTasks = ({ projectId, sprintId }: ProjectTasksProps) => {
     try {
       // Add sprint_id to the URL if provided
       let url = `http://127.0.0.1:5000/project/view_tasks?project_id=${projectId}`;
-      if (sprintId) {
-        url += `&sprint_id=${sprintId}`;
+      if (sprint_id) {
+        url += `&sprint_id=${sprint_id}`;
       }
       
       const response = await fetch(url, {
@@ -162,7 +163,7 @@ const ProjectTasks = ({ projectId, sprintId }: ProjectTasksProps) => {
 
   useEffect(() => {
     fetchTasks();
-  }, [projectId, sprintId]);
+  }, [projectId, sprint_id]);
 
   // Handle task status change
   const handleStatusChange = async (taskId: number, newStatus: string) => {
@@ -178,7 +179,7 @@ const ProjectTasks = ({ projectId, sprintId }: ProjectTasksProps) => {
           task_id: taskId,
           new_status: newStatus,
           project_id: projectId,
-          sprint_id: sprintId
+          sprint_id: sprint_id
         }),
       });
 

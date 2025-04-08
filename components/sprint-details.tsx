@@ -11,7 +11,7 @@ import { format } from "date-fns"
   Start:string ,
   Status:string ,
   name: string
-  sprint_id:string  
+  sprint_id:number
  }
 interface SprintDetailsProps {
   sprint: Sprint | null

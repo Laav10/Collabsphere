@@ -1,24 +1,28 @@
+'use client';
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import TeamMemberDropdown from "@/components/team-members-dropdown";
+import { useUserContext } from "@/lib/usercontext";
 
 interface TaskFormProps {
-  sprintId: string;
+  sprint_id?: number;
   projectId: number;
   onTaskAdded: () => void; // Callback to refresh the task list
 }
 
-export default function TaskForm({ sprintId, projectId, onTaskAdded }: TaskFormProps) {
+export default function TaskForm({ sprint_id, projectId, onTaskAdded }: TaskFormProps) {
   
   const [description, setDescription] = useState("");
   const [weightage, setWeightage] = useState(5);
   const [assignee, setAssignee] = useState("");
   const [assigneeName, setAssigneeName] = useState(""); // Store name for display
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const {user} = useUserContext();
+  
+  console.log("User ID:", user?.id); // Log the user ID
   const handleAssigneeSelected = (userId: string, userName: string) => {
     setAssignee(userId);
     setAssigneeName(userName);
@@ -29,7 +33,9 @@ export default function TaskForm({ sprintId, projectId, onTaskAdded }: TaskFormP
 
 
     setIsSubmitting(true);
-
+    console.log("Submitting task:", {
+      sprint_id,description ,weightage ,assignee, projectId
+    });
     try {
       const response = await fetch("http://127.0.0.1:5000/project/edit_tasks/add_task", {
         method: "POST",
@@ -38,11 +44,12 @@ export default function TaskForm({ sprintId, projectId, onTaskAdded }: TaskFormP
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          sprint_number: sprintId,
+          sprint_number: sprint_id,
          description: description,
           points: weightage,
           assigned_to: assignee || null,
           project_id: projectId,
+          user_id: user?.id, 
         }),
       });
 
