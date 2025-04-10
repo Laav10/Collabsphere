@@ -889,8 +889,8 @@ def create_sprint_route():
     if not all([user_id, project_id, name, start_date, end_date]):
         return jsonify({"error": "Missing required fields"}), 400
 
-    return jsonify(create_sprint(user_id, project_id, name, start_date, end_date))
-
+    return create_sprint(user_id, project_id, name, start_date, end_date)
+ 
 
      
 if __name__ == "__main__":

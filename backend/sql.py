@@ -4,8 +4,9 @@ from flask import Flask, request, jsonify
 import binascii
 #engine = create_engine('postgresql+psycopg2://postgres:Karn1234@localhost:5432/postgres', echo=True)
 engine = create_engine('postgresql://neondb_owner:npg_in9MJCT7Dzqu@ep-twilight-poetry-a1ynwudg-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require', echo=True)
-
 from Crypto.Cipher import AES
+from datetime import date
+
 import os
 import base64
 
@@ -1274,7 +1275,7 @@ def get_project_analytics(project_id):
 
             # Team efficiency 
             total_completed_points = sum(t["points"] for t in tasks if t["status"] == "done")
-            team_efficiency = total_completed_points / team_count if team_count > 0 else 0
+            team_efficiency = len(completed_tasks)/ total_tasks if total_tasks > 0 else 0
 
             # Pending days calculation
             pending_days = 0
@@ -1351,7 +1352,7 @@ def get_project_analytics(project_id):
                 "team_performance": team_performance,
                 "summary": summary  
             }
-
+            print(analytics,"dddddd")
             print(f"Analytics generated for project {project_id}")
             return analytics
 
@@ -1578,7 +1579,6 @@ def get_eligible_users_for_mod(project_id):
                 FROM projectmembers pm
                 JOIN "User" u ON pm.member_id = u.roll_no
                 WHERE pm.project_id = :project_id 
-                AND pm.role NOT IN ('admin', 'moderator')
             """), {"project_id": project_id}).fetchall()
             
             return users
@@ -1735,21 +1735,21 @@ def is_admin_or_mod(user_id, project_id):
 def create_sprint(user_id, project_id, name, start_date, end_date):
     """Create a new sprint only if the previous one is completed and the user is an admin/mod."""
     if not is_admin_or_mod(user_id, project_id):  
-        return {"error": "Only an admin or mod can create a sprint."}, 403
+        return jsonify({"error": "Only an admin or mod can create a sprint."}), 403
 
     last_sprint_status = get_last_sprint_status(project_id)
+    print(last_sprint_status)
     if last_sprint_status != "closed":
-        return {"error": "Previous sprint must be completed before creating a new one."}, 400
-
+        return jsonify({"error": "Previous sprint must be completed before creating a new one."}), 400
     try:
         with engine.begin() as conn:
             conn.execute(text("""
                 INSERT INTO sprint (project_id, name, start_date, end_date, status)
                 VALUES (:project_id, :name, :start_date, :end_date, 'open')
-            """), {"project_id": project_id, "name": name, "start_date": '2025-04-05', "end_date": '2025-04-19'})
-        return {"message": "Sprint created successfully."}, 201
+            """), {"project_id": project_id, "name": name, "start_date": start_date, "end_date": end_date})
+        return jsonify({"message": "Sprint created successfully."}), 201
     except Exception as e:
-        return {"error": str(e)}, 500
+        return jsonify({"error": str(e)}), 500
     
 
 
