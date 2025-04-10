@@ -40,11 +40,11 @@ export const TaskCard = ({ task, status, onStatusChange }: {
   // Get status color for text
   const getStatusColor = () => {
     switch (status) {
-      case "todo":
+      case "To Do":
         return "text-blue-400";
-      case "in_progress":
+      case "In Progress":
         return "text-yellow-400";
-      case "completed":
+      case "Completed":
         return "text-green-400";
       default:
         return "text-white";
@@ -54,11 +54,11 @@ export const TaskCard = ({ task, status, onStatusChange }: {
   // Get status label
   const getStatusLabel = () => {
     switch (status) {
-      case "todo":
+      case "To Do":
         return "To Do";
-      case "in_progress":
+      case "In Progress":
         return "In Progress";
-      case "completed":
+      case "Completed":
         return "Completed";
       default:
         return status;
@@ -68,15 +68,15 @@ export const TaskCard = ({ task, status, onStatusChange }: {
   // Get available next statuses based on current status
   const getNextStatuses = () => {
     switch (status) {
-      case "todo":
-        return [{ value: "in_progress", label: "Move to In Progress" }];
-      case "in_progress":
+      case "To Do":
+        return [{ value: "In Progress", label: "Move to In Progress" }];
+      case "In Progress":
         return [
-          { value: "todo", label: "Move to To Do" },
+          { value: "To do", label: "Move to To Do" },
           { value: "completed", label: "Mark as Completed" }
         ];
-      case "completed":
-        return [{ value: "in_progress", label: "Reopen" }];
+      case "Completed":
+        return [{ value: "In Progress", label: "Reopen" }];
       default:
         return [];
     }
@@ -152,6 +152,7 @@ const ProjectTasks = ({ projectId, sprint_id }: ProjectTasksProps) => {
       
       const data = await response.json();
       setTasksData(data);
+      
       console.log("Tasks Data:", data);
     } catch (error) {
       setError("Failed to fetch data");
@@ -164,12 +165,27 @@ const ProjectTasks = ({ projectId, sprint_id }: ProjectTasksProps) => {
   useEffect(() => {
     fetchTasks();
   }, [projectId, sprint_id]);
-
+  const formatStatus = (status: string) => {
+    const normalized = status.toLowerCase().replace(/_/g, "-");
+    switch (normalized) {
+      case "todo":
+        return "To Do";
+      case "in-progress":
+        return "In Progress";
+      case "completed":
+        return "Completed";
+      default:
+        return status;
+    }
+  };
+  
   // Handle task status change
   const handleStatusChange = async (taskId: number, newStatus: string) => {
     setStatusUpdating(true);
+   
+    
     try {
-      const response = await fetch("http://127.0.0.1:5000/project/update_task_status", {
+      const response = await fetch("http://127.0.0.1:5000/project/edit_tasks/update_task", {
         method: "POST",
         credentials: "include",
         headers: {
@@ -177,9 +193,9 @@ const ProjectTasks = ({ projectId, sprint_id }: ProjectTasksProps) => {
         },
         body: JSON.stringify({
           task_id: taskId,
-          new_status: newStatus,
+          status: formatStatus(newStatus),
           project_id: projectId,
-          sprint_id: sprint_id
+          sprint_id: sprint_id,
         }),
       });
 
@@ -214,8 +230,13 @@ const ProjectTasks = ({ projectId, sprint_id }: ProjectTasksProps) => {
     return <div className="text-center py-4 text-gray-500">No tasks available for this sprint</div>;
   }
 
-  // Get the first sprint (we're filtering by sprint_id in the API call)
-  const sprint = tasksData.sprints[0];
+  // Get the first sprint (we're filtering by sprint_id in the API call)\
+  
+//const sprint = tasksData.sprints[0];
+console.log(tasksData.sprints)
+const sprint = tasksData.sprints[1];
+
+
 
   return (
     <div className="mt-6">
@@ -234,7 +255,7 @@ const ProjectTasks = ({ projectId, sprint_id }: ProjectTasksProps) => {
                 <TaskCard 
                   key={task.id} 
                   task={task} 
-                  status="todo" 
+                  status="To Do" 
                   onStatusChange={handleStatusChange}
                 />
               ))
@@ -255,7 +276,7 @@ const ProjectTasks = ({ projectId, sprint_id }: ProjectTasksProps) => {
                 <TaskCard 
                   key={task.id} 
                   task={task} 
-                  status="in_progress" 
+                  status="In Progress" 
                   onStatusChange={handleStatusChange}
                 />
               ))
@@ -276,7 +297,7 @@ const ProjectTasks = ({ projectId, sprint_id }: ProjectTasksProps) => {
                 <TaskCard 
                   key={task.id} 
                   task={task} 
-                  status="completed" 
+                  status="Completed" 
                   onStatusChange={handleStatusChange}
                 />
               ))

@@ -35,10 +35,13 @@
       const [error, setError] = useState<string | null>(null)
 
  const {user } = useUserContext()  
- const userlocal = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
- const parsedUser = userlocal ? JSON.parse(userlocal) : null;
-   const userId = user?.id ? user?.id:parsedUser?.id;
-   console.log("userId",userId)
+// const userlocal = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+ //const parsedUser = userlocal ? JSON.parse(userlocal) : null;
+   //const userId = user?.id ? user?.id:parsedUser?.id;
+  // console.log("userId",userId)
+   const userlocal = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+const parsedUser = userlocal ? JSON.parse(userlocal) : null;
+  const userId = user?.id ? user?.id:parsedUser?.id;
    // const id = user?.id ? user?.id:userlocal?.id;
  
  const id = 'sanjay23bcy51' // Replace with actual user ID;
@@ -55,7 +58,7 @@
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                user_id: id, 
+                user_id: userId, 
               }),
             })
 

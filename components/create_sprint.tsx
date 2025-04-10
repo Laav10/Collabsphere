@@ -54,14 +54,16 @@ const CreateSprint = ({ project_id, onSprintCreated, onClose }: CreateSprintProp
     setIsLoading(true);
     setError(null);
     setResponseMessage(null);
-
+    const userlocal = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+    const parsedUser = userlocal ? JSON.parse(userlocal) : null;
+      const userId = user?.id ? user?.id:parsedUser?.id;
     try {
       const payload = {
         project_id,
         name: values.name,
         start_date: values.start_date,
         end_date: values.end_date,
-        user_id: user?.id,
+        user_id:userId,
       };
       
       console.log("Payload:", payload);

@@ -124,9 +124,9 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
           </DialogContent>
         </Dialog>
         
-        <TeamMemberDropdown projectId={project_id} label="Assign Moderator" purpose="moderator" onSelect={function (userId: string, userName: string): void {
+     {/*   <TeamMemberDropdown projectId={project_id} label="Assign Moderator" purpose="moderator" onSelect={function (userId: string, userName: string): void {
           throw new Error("Function not implemented.")
-        } } />
+        } } />*/}
       </div>
       
       {/* Updated grid layout */}

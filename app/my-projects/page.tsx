@@ -23,7 +23,10 @@ export default function MyProjects() {
   const [activeTab, setActiveTab] = useState("current")
   const [projectsData, setProjectsData] = useState<Project[]>([]) // Typed as Project[]
 const {user } = useUserContext()
-const id = user?.id ? user?.id:'sanjay23bcy51';
+//const id = user?.id ? user?.id:'aditya23bcy25';
+const userlocal = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+const parsedUser = userlocal ? JSON.parse(userlocal) : null;
+  const userId = user?.id ? user?.id:parsedUser?.id;
   // Fetch projects from the API
   useEffect(() => {
     const fetchProjects = async () => {
@@ -37,7 +40,7 @@ const id = user?.id ? user?.id:'sanjay23bcy51';
            // Replace with the actual user ID
            body: JSON.stringify({
           
-            user_id: id , // Use the user ID from the context
+            user_id: userId, //us Use the user ID from the context
             
           }),
         })

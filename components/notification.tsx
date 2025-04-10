@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { formatDistanceToNow } from "date-fns"
 import { useUserContext } from "@/lib/usercontext"
+import Link from "next/link";
 
 interface Notification {
   application_id: number
@@ -22,7 +23,7 @@ interface Notification {
   role: string
   status: "Pending" | "Accepted" | "Rejected"
   title: string
-  user_id: number
+  user_id: string
 }
 
 export default function NotificationBell() {
@@ -52,14 +53,14 @@ export default function NotificationBell() {
         console.log("Server is not reachable")
       })
       
-      const response = await fetch("http://127.0.0.1:5000/project/notification", {
+      const response = await fetch("http://127.0.0.1:5000/notification", {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          user_id: userId,
+          user_id: "aditya23bcy25",
         }),
       })
 
@@ -102,7 +103,7 @@ export default function NotificationBell() {
             role: "member",
             status: "Pending",
             title: "Web App Development",
-            user_id: 2
+            user_id: "aditya23bcy25",
           },
 
         ])
@@ -122,17 +123,18 @@ export default function NotificationBell() {
     return () => clearInterval(intervalId)
   }, [userId]) // Add userId as dependency to refetch when user changes
 
-  const handleAcceptRequest = async (applicationId: number, accept: boolean) => {
+  const handleAcceptRequest = async (applicationId: number,project_id:number,applicant_id:string, accept: boolean) => {
     try {
       setLoading(true)
-      const response = await fetch("http://127.0.0.1:5000/project/response", {
+      const response = await fetch("http://127.0.0.1:5000/update/project/app/status", {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          application_id: applicationId,
+          user_id: applicant_id,
+          project_id: project_id,
           status: accept ? "Accepted" : "Rejected",
         }),
       })
@@ -142,8 +144,8 @@ export default function NotificationBell() {
       }
 
       const data = await response.json()
-      
-      if (data.success) {
+      console.log("Server Responsef:", data)
+      if (data) {
         // Optimistically update the local state
         setNotifications(prev => 
           prev.map(notification => 
@@ -225,7 +227,8 @@ export default function NotificationBell() {
                 >
                   <div className="flex justify-between items-start mb-1">
                     <span className="font-medium text-sm">
-                      {notification.title}
+                      Project Name:
+                      <span className="text-pink-500"> {notification.title}</span>
                     </span>
                     <Badge 
                       variant={
@@ -243,9 +246,18 @@ export default function NotificationBell() {
                   
                   <p className="text-xs text-zinc-400 mb-2">
                     {notification.applied === "admin" ? (
-                      <>You have been invited to join <span className="text-pink-500">{notification.title}</span> as {notification.role}</>
+                      <>You have been invited to join <span className="text-pink-500">{notification.user_id}</span> as {notification.role}</>
                     ) : (
-                      <>Request to join <span className="text-pink-500">{notification.title}</span> as {notification.role}</>
+                      <>
+  Request to join{" "}
+  <Link href={`/profile/${notification.user_id}`}>
+    <span className="text-pink-500 hover:underline cursor-pointer">
+      {notification.user_id}
+    </span>
+  </Link>{" "}
+  as {notification.role}
+
+                    </>
                     )}
                   </p>
                   
@@ -256,9 +268,9 @@ export default function NotificationBell() {
                   )}
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-zinc-500">
+                    {/*<span className="text-xs text-zinc-500">
                       {formatDistanceToNow(new Date(notification.applied_at), { addSuffix: true })}
-                    </span>
+                    </span>*/}
                     
                     {notification.status === "Pending" && (
                       <div className="flex gap-2">
@@ -267,7 +279,7 @@ export default function NotificationBell() {
                           size="sm" 
                           variant="ghost"
                           className="h-7 px-2 py-1 text-xs text-red-500 hover:bg-red-500/10 hover:text-red-500"
-                          onClick={() => handleAcceptRequest(notification.application_id, false)}
+                          onClick={() => handleAcceptRequest(notification.application_id,notification.project_id,notification.user_id, false)}
                           disabled={loading}
                         >
                           <X className="h-3 w-3 mr-1" /> Reject
@@ -275,7 +287,7 @@ export default function NotificationBell() {
                         <Button 
                           size="sm"
                           className="h-7 px-2 py-1 text-xs bg-pink-600 hover:bg-pink-700"
-                          onClick={() => handleAcceptRequest(notification.application_id, true)}
+                          onClick={() => handleAcceptRequest(notification.application_id,notification.project_id,notification.user_id, true)}
                           disabled={loading}
                         >
                           <Check className="h-3 w-3 mr-1" /> Accept

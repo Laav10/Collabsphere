@@ -7,9 +7,9 @@ interface TaskCardProps {
   title: string;
   description: string;
   weightage: number;
-  status: "todo" | "in-progress" | "completed";
+  status: "To Do" | "In Progress" | "Completed";
   assignee?: string;
-  onUpdateStatus: (taskId: string, status: "todo" | "in-progress" | "completed") => void;
+  onUpdateStatus: (taskId: string, status: "To Do" | "In Progress" | "Completed") => void;
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({ id, title, description, weightage, status, assignee, onUpdateStatus }) => {
@@ -33,32 +33,32 @@ const TaskCard: React.FC<TaskCardProps> = ({ id, title, description, weightage, 
         )}
       </CardContent>
       <CardFooter className="p-2 pt-0 flex justify-end">
-        {status === "todo" && (
+        {status === "To Do" && (
           <Button
             variant="ghost"
             size="sm"
             className="h-8 px-2 text-xs"
-            onClick={() => onUpdateStatus(id, "in-progress")}
+            onClick={() => onUpdateStatus(id, "In Progress")}
           >
             Start
           </Button>
         )}
-        {status === "in-progress" && (
+        {status === "In Progress" && (
           <Button
             variant="ghost"
             size="sm"
             className="h-8 px-2 text-xs"
-            onClick={() => onUpdateStatus(id, "completed")}
+            onClick={() => onUpdateStatus(id, "Completed")}
           >
             Complete
           </Button>
         )}
-        {status === "completed" && (
+        {status === "Completed" && (
           <Button
             variant="ghost"
             size="sm"
             className="h-8 px-2 text-xs"
-            onClick={() => onUpdateStatus(id, "todo")}
+            onClick={() => onUpdateStatus(id, "To Do")}
           >
             Reopen
           </Button>

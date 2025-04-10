@@ -47,7 +47,7 @@ const {user } = useUserContext()
 const userlocal = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
 const parsedUser = userlocal ? JSON.parse(userlocal) : null;
   const userId = user?.id ? user?.id:parsedUser?.id;
-  console.log("userId",userId)
+  console.log("userIds",userId)
   // const id = user?.id ? user?.id:userlocal?.id;
 
 const id = 'sanjay23bcy51';
@@ -90,7 +90,7 @@ const id = 'sanjay23bcy51';
           headers: {
             "Content-Type": "application/json", // Specify that we're sending JSON data
           },
-          body: JSON.stringify({roll_no: id }),
+          body: JSON.stringify({roll_no: userId }),
         });
 
         if (!response.ok) {
@@ -122,7 +122,7 @@ const id = 'sanjay23bcy51';
             headers: {
               "Content-Type": "application/json", // Specify that we're sending JSON data
             },
-            body: JSON.stringify({ user_id }),
+            body: JSON.stringify({ user_id:userId }),
           }
         );
 
@@ -166,7 +166,7 @@ const id = 'sanjay23bcy51';
             headers: {
               "Content-Type": "application/json", // Specify that we're sending JSON data
             },
-            body: JSON.stringify({ user_id }),
+            body: JSON.stringify({ user_id :userId}),
           }
         );
 
