@@ -234,11 +234,16 @@ const ProjectTasks = ({ projectId, sprint_id }: ProjectTasksProps) => {
   
 //const sprint = tasksData.sprints[0];
 console.log(tasksData.sprints)
-const sprint = tasksData.sprints[1];
 
+const sprint = tasksData.sprints.find(s => s.sprint_number === sprint_id);
+    console.log("Sprint found:", sprint); 
+    if (!sprint) {
+      return <div className="text-center py-4 text-gray-500">No sprint data found</div>;
+    }
 
 
   return (
+    
     <div className="mt-6">
       <h2 className="text-xl font-bold mb-4">Sprint Tasks</h2>
       

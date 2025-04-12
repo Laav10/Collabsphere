@@ -571,9 +571,19 @@ const id = 'sanjay23bcy51';
             <Card className="bg-gray-800 border-none">
               <CardContent className="space-y-6">
                 <div className="pt-4 border-t border-gray-700">
-                  <Button onClick={()=>{}} variant="destructive" className="w-full">
-                    <LogOut className="mr-2 h-4 w-4" /> Logout
-                  </Button>
+                <Button 
+  onClick={() => {
+    localStorage.removeItem('user');
+   localStorage.removeItem('token');
+    
+    // Redirect to homepage
+    router.push('/');
+  }} 
+  variant="destructive" 
+  className="w-full"
+>
+  <LogOut className="mr-2 h-4 w-4" /> Logout
+</Button>
                 </div>
               </CardContent>
             </Card>
