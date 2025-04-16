@@ -367,103 +367,103 @@ export default function ProjectAnalytics({ projectId }: ProjectAnalyticsProps) {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Burndown Chart */}
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardHeader>
-            <CardTitle>Sprint Burndown</CardTitle>
-            <CardDescription>Planned vs completed story points across sprints</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              {burndownData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={burndownData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                    <XAxis dataKey="sprint" stroke="#888" />
-                    <YAxis stroke="#888" />
-                    <Tooltip 
-                      contentStyle={{
-                        backgroundColor: "#333",
-                        border: "1px solid #444",
-                        borderRadius: "4px",
-                      }}
-                    />
-                    <Legend />
-                    <Bar 
-                      dataKey="planned" 
-                      name="Planned Points" 
-                      stackId="a" 
-                      fill="#36BFFA" 
-                      radius={[4, 4, 0, 0]}
-                    />
-                    <Bar 
-                      dataKey="completed" 
-                      name="Completed Points" 
-                      stackId="b" 
-                      fill="#F471B5" 
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-muted-foreground">No sprint data available</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Velocity Trend Chart */}
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardHeader>
-            <CardTitle>Velocity Trend</CardTitle>
-            <CardDescription>Story points completed per sprint</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              {velocityData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={velocityData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                    <XAxis dataKey="sprint" stroke="#888" />
-                    <YAxis stroke="#888" />
-                    <Tooltip 
-                      contentStyle={{
-                        backgroundColor: "#333",
-                        border: "1px solid #444",
-                        borderRadius: "4px",
-                      }}
-                    />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="velocity"
-                      name="Velocity"
-                      stroke="#F471B5"
-                      strokeWidth={3}
-                      dot={{ r: 6, fill: "#F471B5", strokeWidth: 2, stroke: "#F471B5" }}
-                      activeDot={{ r: 8 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-muted-foreground">No velocity data available</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Charts */}
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  {/* Burndown Chart */}
+  <Card className="bg-zinc-900 border-zinc-800">
+    <CardHeader>
+      <CardTitle>Sprint Burndown</CardTitle>
+      <CardDescription>Planned vs completed story points across sprints</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <div className="h-80">
+        {burndownData.length > 0 ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={burndownData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+              <XAxis dataKey="sprint" stroke="#888" />
+              <YAxis stroke="#888" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#333",
+                  border: "1px solid #444",
+                  borderRadius: "4px",
+                }}
+              />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="planned"
+                name="Planned Points"
+                stroke="#36BFFA"
+                strokeWidth={3}
+                dot={{ r: 6, fill: "#36BFFA", strokeWidth: 2, stroke: "#36BFFA" }}
+                activeDot={{ r: 8 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="completed"
+                name="Completed Points"
+                stroke="#F471B5"
+                strokeWidth={3}
+                dot={{ r: 6, fill: "#F471B5", strokeWidth: 2, stroke: "#F471B5" }}
+                activeDot={{ r: 8 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-muted-foreground">No sprint data available</p>
+          </div>
+        )}
       </div>
-
+    </CardContent>
+  </Card>
+  {/* Velocity Trend Chart */}
+  <Card className="bg-zinc-900 border-zinc-800">
+    <CardHeader>
+      <CardTitle>Velocity Trend</CardTitle>
+      <CardDescription>Story points completed per sprint</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <div className="h-80">
+        {velocityData.length > 0 ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={velocityData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+              <XAxis dataKey="sprint" stroke="#888" />
+              <YAxis stroke="#888" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#333",
+                  border: "1px solid #444",
+                  borderRadius: "4px",
+                }}
+              />
+              <Legend />
+              <Bar
+                dataKey="velocity"
+                name="Velocity"
+                fill="#F471B5"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-muted-foreground">No velocity data available</p>
+          </div>
+        )}
+      </div>
+    </CardContent>
+  </Card>
+</div>
       {/* Team Performance and Task Completion */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Team Performance */}
