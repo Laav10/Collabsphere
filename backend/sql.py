@@ -2,14 +2,30 @@ from sqlalchemy import create_engine,text
 import psycopg2
 from flask import Flask, request, jsonify
 import binascii
+#engine = create_engine('postgresql+psycopg2://postgres:Karn1234@localhost:5432/postgres', echo=True)
+engine = create_engine('postgresql://neondb_owner:npg_in9MJCT7Dzqu@ep-twilight-poetry-a1ynwudg-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require', echo=True)
+from Crypto.Cipher import AES
 from datetime import date
 
-
-engine = create_engine('postgresql+psycopg2://postgres:Laav10%40inf@localhost:5432/collabsphere', echo=True)
-
-from Crypto.Cipher import AES
 import os
 import base64
+
+def insert():
+    # Insert user data into the database
+    with engine.connect() as conn:
+        query = text("""
+            INSERT INTO "User" (roll_no, name, email)
+            VALUES (:roll_no, :name, :email)
+        """)
+        conn.execute(query, {
+            "roll_no": "sds",
+            "name":"Adi",
+            "email": "wwd"
+        })
+        conn.commit()  # Commit the transaction
+        return jsonify({"project":"added"})
+
+
 
 def encrypt_message(message, secret_key):
     cipher = AES.new(secret_key, AES.MODE_GCM)  # Use AES-GCM mode
@@ -25,22 +41,23 @@ def decrypt_message(encrypted_message, secret_key):
     cipher = AES.new(secret_key, AES.MODE_GCM, nonce=nonce)
     return cipher.decrypt_and_verify(ciphertext, tag).decode()
 
-def is_admin_or_mod(user_id, project_id):
-    """Check if a user is an admin or moderator of a project."""
-    with engine.connect() as conn:
-        result = conn.execute(text("""
-            SELECT 1 FROM projectmembers
-            WHERE member_id = :user_id AND project_id = :project_id AND role IN ('admin', 'moderator')
-        """), {"user_id": user_id, "project_id": project_id}).fetchone()
-        return result is not None
-
 def user_insert_google_sql(data):
 
     try:
         # Connect to the database
         with engine.connect() as conn:
+            RESULT1=conn.execute(text("""select * from "User" where roll_no=:val1"""),{
+
+              "val1":data['roll_no']
+
+
+            })
+
+            if(RESULT1.rowcount>0):
+                return jsonify({"user":"already exist"}), 401
+
             query = text("""INSERT INTO "User" (roll_no, name,email) VALUES (:roll_no, :name,:email)""")
-            conn.execute(query, {"roll_no": 11, "name": data['user_name'],"email":data['email']})
+            conn.execute(query, {"roll_no":data["roll_no"], "name": data['user_name'],"email":data['email']})
             conn.commit()  # Commit the transaction
         return  jsonify({"user":"registered successfully"})
     except Exception as e:
@@ -65,6 +82,8 @@ def  insert_message(message):
 
      decrypt_message(encrypted_msg, aes_key)
      print(decrypt_message(encrypted_msg, aes_key), "decrypted")
+
+
 
 def  fetch_message(message):
  with engine.connect() as conn:
@@ -97,10 +116,10 @@ def add_projects(data):
          return jsonify({"project":"already exist"}), 401
    
    else:
-      with engine.connect() as conn:
+    with engine.connect() as conn:
        # check whether with same admin same name other project exist
-       try:
-        result=conn.execute(text("""INSERT INTO "Project"
+     try:
+         result=conn.execute(text("""INSERT INTO "Project"
 (admin_id, title, description, start_date, end_date, members_required, status, tags)
                                 values
             (:val1,:val2,:val3,:val4,:val5,:val6,:val7,:val8)"""),{
@@ -115,23 +134,45 @@ def add_projects(data):
          "val8":data['tags']
           
           })
-        conn.commit()
+         result1=conn.execute(text("""select project_id from "Project"
+                                   where admin_id=:val1 and title=:val2""")
+                                   ,{
+                                       
+"val1":data['admin_id'],
+          "val2":data['title'],
+
+                                   })
+         project_id=result1.fetchall()[0].project_id
+         query = """
+INSERT INTO projectmembers (project_id, member_id, role)
+VALUES (:val1, :val2, :val3)
+"""
+
+# Execute the query using bound parameters
+         result2 = conn.execute(text(query), {
+    "val1": project_id,
+    "val2": data['admin_id'],
+    "val3": "admin"
+})        
+         conn.commit()
          
-        return jsonify({"project":"added"})
+         return jsonify({"project":"added"})
 
 
        
 
-       except Exception as e: 
+     except Exception as e: 
          return jsonify({"error": str(e)}), 500 
 def ranking():
+      #changes for new db rating to project rating
     with engine.connect() as conn:
         result=conn.execute(text("""SELECT 
     p.project_id, 
     p.title, 
-    AVG(r.rating_value)*0.7+0.3 * COUNT(r.review) AS score
+    AVG(r.score)*0.7+0.3 * COUNT(r.comment) AS score
     FROM 
-    Rating r
+                               
+    projectrating r
     JOIN 
     "Project" p ON r.project_id = p.project_id
     GROUP BY  
@@ -149,7 +190,37 @@ def ranking():
     for row in rows
 ]
         
-        print(data)
+        #print(data)
+        return jsonify({"project": data})
+    
+def rankings():
+      #changes for new db rating to project rating
+    with engine.connect() as conn:
+        result=conn.execute(text("""SELECT 
+    p.project_id, 
+    p.title, 
+    AVG(r.rating_value)*0.7+0.3 * COUNT(r.review) AS score
+    FROM 
+                               
+    projectrating r
+    JOIN 
+    "Project" p ON r.project_id = p.project_id
+    GROUP BY  
+    p.project_id, 
+    p.title
+    ORDER BY 
+    score DESC;
+    """))
+        conn.commit()
+        
+        rows=result.fetchall()
+       
+        data = [
+    {"project_id": row[0], "title": row[1], "score": row[2]}
+    for row in rows
+]
+        
+        #print(data)
         return jsonify({"project": data})
 def first_logins(data):
        with engine.connect() as conn:
@@ -186,7 +257,8 @@ def profile_views(data):
         "role_type": row[6],  
         "rating": row[7]  ,
         "email_update": row[8],
-        "project_update": row[9]
+        "project_update": row[9],
+        "name":row[10]
     }
     for row in rows
 ]
@@ -208,11 +280,10 @@ def update_profile_sql(data):
             past_experience = :past_experience,
             tech_stack = :tech_stack,
             github_profile = :github_profile,
-            linkedin_profile = :linkedin_profile,
+            linkedin_profile = :linkedin_profile
            
             
-            email_update = :email_update,
-            project_update = :project_update
+           
         WHERE roll_no = :roll_no
     """)
 
@@ -222,16 +293,19 @@ def update_profile_sql(data):
         "tech_stack": data["tech_stack"],
         "github_profile": data["github_profile"],
         "linkedin_profile": data["linkedin_profile"],
+        "roll_no":data["roll_no"]
        
-        "email_update": data["email_update"],
-        "project_update": data["project_update"],
-        "roll_no": data["roll_no"]
+      
+        
     })
-
+  
             conn.commit()
             return jsonify({"profile":"updated"})
         except Exception as e:
+            
+            print(e,"s")
             return jsonify({"error": str(e)}), 500
+            print(e,"s")
         
 
 
@@ -248,10 +322,9 @@ def list_users_sql():
                     "User" u
                 LEFT JOIN 
                     "projectmembers" p ON u.roll_no = p.member_id
-                JOIN 
+                left JOIN 
                     "Project" pa ON p.project_id = pa.project_id
-                WHERE 
-                    pa.status = 'Completed'
+               
                 GROUP BY 
                     u.roll_no
             """)
@@ -474,7 +547,7 @@ def admin_request_accept_sql(data):
             })
 
             if data["status"] == "Accepted":
-                 result1=conn.execute(text("""select * from projectapplication
+                 result1=conn.execute(text("""select * from projectjoin
                                               
                       where user_id=:val1 and project_id=:val2                        
                                               
@@ -518,6 +591,7 @@ def admin_request_accept_sql(data):
                     "project_id": data["project_id"],
                     "user_id": data["user_id"]
                 })
+              conn.commit()
             return jsonify({"request": "updated"}), 200
 
     except Exception as e:
@@ -913,7 +987,7 @@ def list_myprojects_sql(data):
     CASE 
         WHEN pa.status = 'Pending' THEN 'Applied'
         WHEN p.status IN ('Completed') THEN 'Completed'
-        wHEN p.status='Active'  THEN 'Active'
+        WHEN p.status IN ('Planning','Active')  THEN 'Active'
         
         ELSE 'Apply Now'
     END AS status
@@ -955,9 +1029,132 @@ LEFT JOIN projectapplication AS pa
           return jsonify({"project":data})
      except Exception as e:
             return jsonify({"error": str(e)}), 500
-          
-       
-       #__________PROJECT SQL _____________#
+
+
+
+def notification_sql(data):
+ print(data,"sd")
+ with engine.connect() as conn:
+    result = conn.execute(text("""
+    SELECT * 
+    FROM projectapplication AS pa
+    JOIN "Project" AS p
+                                
+    ON p.project_id = pa.project_id 
+    WHERE p.admin_id=:user_id
+    AND pa.status = 'Pending'
+"""), {"user_id": data["user_id"]})
+    pending_applications = result.fetchall()
+
+    applications_json = [
+    {
+        "application_id": application[0],
+        "user_id": application[1],
+        "project_id": application[2],
+        "role": application[3],
+        "status": application[4],
+        "applied_at": application[5].isoformat(),  # Convert timestamp to ISO format string
+        "remarks": application[6],
+        "applied":"user",
+        "title":application[9]
+    }
+    for application in pending_applications
+    ]
+
+    result = conn.execute(text("""
+    SELECT * 
+    FROM projectjoin
+    WHERE user_id = :user_id
+    AND status = 'Pending';
+"""), {"user_id": data["user_id"]})
+    
+
+    project_join_results = result.fetchall()
+
+    project_joins_json = [
+    {
+        "application_id": application[0],
+        "user_id": application[1],
+        "project_id": application[2],
+        "role": application[3],
+        "status": application[4],
+        "applied_at": application[5].isoformat(),  # Convert timestamp to ISO format string
+        "remarks": application[6],
+        "applied":"admin"
+    }
+    for application in project_join_results
+    ]
+    all_notifications_json = applications_json + project_joins_json
+    return jsonify({"notification":all_notifications_json}),200
+def member_sql(data):
+    query = text("""
+        SELECT *
+        FROM projectmembers 
+        WHERE project_id = :project_id AND member_id = :member_id
+    """)
+
+    with engine.connect() as conn:
+        result = conn.execute(query, {
+            "project_id":data['project_id'],
+            "member_id": data['member_id']
+        })
+
+        row=result.fetchone()
+
+        if(row):
+
+            return jsonify({"member":"yes","role":row[2]}), 200
+
+           
+        
+        else:
+            return jsonify({"member":"no"}), 401
+        
+def change_sprint_status_sql(data):
+    #check for particular project and sprint
+
+    try:
+        # Check if all task are done or not
+        with engine.connect() as conn:
+            result = conn.execute(text("""
+               select * from sprint where project_id=:project_id and sprint_number=:sprint_id  and status not in 'done'
+                                        
+            """), {
+               
+                "project_id": data["project_id"],
+                "sprint_id": data["sprint_id"]
+               
+            })
+            conn.commit()
+            if result.scalar > 0:
+                return jsonify({"sprint": "complete previous"}), 404
+
+
+
+
+        with engine.connect() as conn:
+            result = conn.execute(text("""
+                UPDATE sprint 
+                SET status = :status
+                WHERE project_id = :project_id AND sprint_id = :sprint_id;
+            """), {
+                "status": data["status"],
+                "project_id": data["project_id"],
+                "sprint_id": data["sprint_id"]
+            })
+            conn.commit()
+
+            if result.rowcount == 0:
+                return jsonify({"error": "Sprint not found"}), 404
+
+            return jsonify({"sprint": "updated"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+     
+
+
+#laavanya
 
 def get_project_details(project_id):
     try:
@@ -1078,7 +1275,7 @@ def get_project_analytics(project_id):
 
             # Team efficiency 
             total_completed_points = sum(t["points"] for t in tasks if t["status"] == "done")
-            team_efficiency = total_completed_points / team_count if team_count > 0 else 0
+            team_efficiency = len(completed_tasks)/ total_tasks if total_tasks > 0 else 0
 
             # Pending days calculation
             pending_days = 0
@@ -1155,7 +1352,7 @@ def get_project_analytics(project_id):
                 "team_performance": team_performance,
                 "summary": summary  
             }
-
+            print(analytics,"dddddd")
             print(f"Analytics generated for project {project_id}")
             return analytics
 
@@ -1165,7 +1362,7 @@ def get_project_analytics(project_id):
         traceback.print_exc()  
         return None
 
-def add_task(project_id, sprint_number, description, assigned_to, points):
+def add_task(project_id, sprint_number, description, assigned_to, points,status):
     """Insert a new task into the 'task' table."""
     try:
         with engine.connect() as conn:
@@ -1177,7 +1374,8 @@ def add_task(project_id, sprint_number, description, assigned_to, points):
                 "sprint_number": sprint_number,
                 "description": description,
                 "assigned_to": assigned_to,
-                "points": points
+                "points": points,
+                "status": status
             })
             conn.commit()
         return True, "Task added successfully"
@@ -1309,18 +1507,18 @@ def get_sprint_status(project_id, sprint_number):
         return result[0] if result else None 
 
     
-def add_task(project_id, sprint_number, description, assigned_to, points):
-    try:
-        with engine.connect() as conn:
-            conn.execute(text("""
-                INSERT INTO task (project_id, sprint_number, description, assigned_to, status, points)
-                VALUES (:project_id, :sprint_number, :description, :assigned_to, 'pending', :points)
-            """), {"project_id": project_id, "sprint_number": sprint_number, "description": description, "assigned_to": assigned_to, "points": points})
-            conn.commit()
-        return True
-    except Exception as e:
-        print(f"Error adding task: {e}")
-        return False
+#def add_task(project_id, sprint_number, description, assigned_to, points,):
+   # try:
+        #with engine.connect() as conn:
+        #    conn.execute(text("""
+        #        INSERT INTO task (project_id, sprint_number, description, assigned_to, status, points)
+        #        VALUES (:project_id, :sprint_number, :description, :assigned_to, 'pending', :points)
+        #    """), {"project_id": project_id, "sprint_number": sprint_number, "description": description, "assigned_to": assigned_to, "points": points})
+       #     conn.commit()
+      #  return True
+   # except Exception as e:
+   #     print(f"Error adding task: {e}")
+   #     return False
 
 def get_sprints(project_id):
     try:
@@ -1381,7 +1579,6 @@ def get_eligible_users_for_mod(project_id):
                 FROM projectmembers pm
                 JOIN "User" u ON pm.member_id = u.roll_no
                 WHERE pm.project_id = :project_id 
-                AND pm.role NOT IN ('admin', 'moderator')
             """), {"project_id": project_id}).fetchall()
             
             return users
@@ -1521,28 +1718,81 @@ def get_last_sprint_status(project_id):
             ORDER BY sprint_id DESC LIMIT 1
         """), {"project_id": project_id}).fetchone()
         return result[0] if result else "closed"
+    
+def is_admin_or_mod(user_id, project_id):
+    """Check if the user is an admin or moderator of the project."""
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(text("""
+                SELECT role FROM projectmembers
+                WHERE project_id = :project_id AND member_id = :user_id
+            """), {"project_id": project_id, "user_id": user_id}).fetchone()
+            return result and result[0] in ["admin", "moderator"]
+    except Exception as e:
+        print(f"Error checking admin/mod status: {e}")
+        return False
 
 def create_sprint(user_id, project_id, name, start_date, end_date):
     """Create a new sprint only if the previous one is completed and the user is an admin/mod."""
     if not is_admin_or_mod(user_id, project_id):  
-        return {"error": "Only an admin or mod can create a sprint."}, 403
+        return jsonify({"error": "Only an admin or mod can create a sprint."}), 403
 
     last_sprint_status = get_last_sprint_status(project_id)
+    print(last_sprint_status)
     if last_sprint_status != "closed":
-        return {"error": "Previous sprint must be completed before creating a new one."}, 400
-
+        return jsonify({"error": "Previous sprint must be completed before creating a new one."}), 400
     try:
         with engine.begin() as conn:
             conn.execute(text("""
                 INSERT INTO sprint (project_id, name, start_date, end_date, status)
                 VALUES (:project_id, :name, :start_date, :end_date, 'open')
             """), {"project_id": project_id, "name": name, "start_date": start_date, "end_date": end_date})
-        return {"message": "Sprint created successfully."}, 201
+        return jsonify({"message": "Sprint created successfully."}), 201
     except Exception as e:
-        return {"error": str(e)}, 500
+        return jsonify({"error": str(e)}), 500
     
 
 
+     
+
+    
+
+
+
+
+
+
+         
+
+
+
+
+
+
+
+
+
+
+
+     
+     
+          
+       
+
+
+
+             
+       
+       
+
+
+     
+
+
+
+
+
+  
      
 
     

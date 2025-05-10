@@ -2,57 +2,34 @@ import firebase_admin
 from firebase_admin import credentials, auth,firestore
 from flask import Flask, request, jsonify,make_response
 from flask_cors import CORS  # Import CORS
+from flask_cors import cross_origin
+
 import time
 from data_valid import UserSchema,add_project_schema,first_login_schema,list_of_mentors_schema,apply_mentors_schema,apply_mentors_status_takeback_schema
 from data_valid import accept_mentor_schema,apply_project_schema,apply_project_status_schema,list_apply_project_schema,list_projects_scheme
-from datetime import datetime
+from datetime import datetime,timedelta
+from auth import  firebase_uid_required  # Import auth_bp
 
 from smtp import send_email
-#from sql import add_projects,ranking,first_logins,profile_views,list_of_mentors_sql,apply_mentors_sql,apply_project_sql
-#from sql import apply_project_status_sql,list_apply_project_sql,update_project_application_status_sql,apply_project_status_takeback_sql,update_profile_sql,accept_mentor_sql
-#from sql import apply_mentors_takeback_sql,list_users_sql,list_projects_sql,list_current_projects_sql,list_past_projects_sql,admin_request_sql,admin_request_accept_sql,list_myprojects_sql,user_insert_google_sql
 from sql import *
-from sql import engine
+#from sql import add_projects,ranking,first_logins,profile_views,list_of_mentors_sql,apply_mentors_sql,apply_project_sql
+#from sql import apply_project_status_sql,list_apply_project_sql,update_project_application_status_sql,apply_project_status_takeback_sql,update_profile_sql,accept_mentor_sql,notification_sql
+#from sql import apply_mentors_takeback_sql,list_users_sql,list_projects_sql,list_current_projects_sql,list_past_projects_sql,admin_request_sql,admin_request_accept_sql,list_myprojects_sql,user_insert_google_sql
 from google.cloud.firestore_v1 import FieldFilter
-
-# Initializing  Firebase Admin - Aditya 
+# Initialize Firebase Admin
 cred = credentials.Certificate("key.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 users = db.collection('users')
 
 app = Flask(__name__)
+
 CORS(app,supports_credentials=True)
 
-def is_admin(user_id, project_id):
-    """Check if the user is an admin for a project in Firestore."""
-    try:
-        project_ref = db.collection("projects").document(project_id).get()
-        if project_ref.exists:
-            project_data = project_ref.to_dict()
-            return user_id in project_data.get("admins", [])
-        return False
-    except Exception as e:
-        print(f"Error checking admin status: {e}")
-        return False
+@app.route('/check',methods=['GET'])
+def check():
+   return insert()
 
-def has_project_access(user_id, project_id):
-    """Check if the user is an admin, mod, or mentor for a project in Firestore."""
-    try:
-        project_ref = db.collection("projects").document(project_id).get()
-        if project_ref.exists:
-            project_data = project_ref.to_dict()
-            return user_id in project_data.get("admins", []) or \
-                   user_id in project_data.get("moderators", []) or \
-                   user_id in project_data.get("mentors", [])
-        return False
-    except Exception as e:
-        print(f"Error checking user access: {e}")
-        return False
-
-@app.route("/", methods=["GET"])
-def home():
-    return jsonify({"message": "Server is running!"})
 
 @app.route('/verify/user_id',methods=['POST'])
 def verify_email():
@@ -63,10 +40,11 @@ def verify_email():
 
             fingerprint = data.get("fingerprint")
 
-            decoded_token = auth.verify_id_token(id_token)  # Verifying token
+            decoded_token = auth.verify_id_token(id_token)  # Verify token
        
             if decoded_token['uid'] != uid:
                return jsonify({"user_verfied": "false"}), 403
+            #set in db
            # users.set({"first": "Ada", "last": "Lovelace", "born": 1815})
 
            
@@ -116,7 +94,7 @@ def transform_email(username):
 @app.route('/verify/google', methods=['POST'])
 def verify():
     #new sign in
-    time.sleep(2)  # Add a 2-second delay before verifying
+    time.sleep(5)  # Add a 2-second delay before verifying
 
     data = request.json
     id_token = data.get("idToken")
@@ -132,20 +110,22 @@ def verify():
         print(f"User name: {user_name}")
         user_name = user_name.replace("-IIITK", "").strip()
         data['user_name']=user_name
-        data[roll_no]=roll_no
+        #data[roll_no]=roll_no
+        data['roll_no']=email.split('@')[0]
+
         #data[user_name]=user_name
        
 
         #print(decoded_token)
         if decoded_token['uid'] != uid:
-              return jsonify({"user_verfied": "false"}), 403
+              return jsonify({"user_verfied": "false",}), 403
         # Verify fingerprint (implement fingerprint logic)
        # if fingerprint :
           #return jsonify({"error": "Fingerprint mismatch"}), 403
         try:
          #   print(username)
-            users = db.collection('users').document(roll_no)
-            user_insert_google_sql(data)
+         #not for prof
+            users = db.collection('users').document( email.split('@')[0] )
         
 
             
@@ -156,7 +136,7 @@ def verify():
            # Add to Firestore
             print("success")
             print("ds")
-            response = make_response(jsonify({"user_verified": True, "message": "cookie set"}))
+            response = make_response(jsonify({"user_verified": True, "message": "cookie set","roll_no":data['roll_no']}))
             response.set_cookie(
             "fingerprint", fingerprint, 
          
@@ -176,6 +156,8 @@ def verify():
             max_age=60*60*24*3,  # 7 days expiration
             
             )
+            user_insert_google_sql(data)
+
            # print(response.headers)
             return response
                #add user in db if not present
@@ -187,10 +169,18 @@ def verify():
     except Exception as e:
          return jsonify({"error": str(e)}), 401
 
+def get_roll_no(uid):
+    user_id=auth.get_user(uid)
+    
+    email=user_id.email.split('@')[0]
+    return email
+#uid="cpV0OfOaqvfQGdGMI6c1vkjqTEg2"
+#get_roll_no(uid)
  
 @app.route('/auto_login',methods=['GET','POST'])
 def auto_login():
-    if request.method=='GET':
+    if request.method=='POST':
+     data=request.json()
      #    uid=request.cookies.get("uid")
        #  print(uid)
        #take fingerprint frontend
@@ -198,31 +188,39 @@ def auto_login():
      uid=request.cookies.get("uid")
 
      
-     fingerprint=request.cookies.get("fingerprint")
-
+     fingerprint=data["fingerprint"]
 
      if not uid or not fingerprint:
         return jsonify({"authenticated": False, "message": "Session expired"}), 401
      
 
-     try:
+    try:
        #user=auth.get_user(uid)
       # use firebase client and set expiration time
-       result = users.where(filter=FieldFilter("uid", "==", uid)) \
-              .where(filter=FieldFilter("fingerprint", "==", fingerprint))
+      three_days_ago = datetime.utcnow() - timedelta(days=3)
 
-       output=result.get()
-       if output:
+# Convert the datetime to a string or timestamp format suitable for the database
+      three_days_ago_str = three_days_ago.strftime('%Y-%m-%dT%H:%M:%S')  # Example format
+
+# Apply the filters: uid, fingerprint, and created_at within the last 3 days
+      result = users.where(filter=FieldFilter("uid", "==", uid)) \
+              .where(filter=FieldFilter("fingerprint", "==", fingerprint)) \
+              .where(filter=FieldFilter("created_at", "<=", three_days_ago_str))
+       #result = users.where(filter=FieldFilter("uid", "==", uid)) \
+              #.where(filter=FieldFilter("fingerprint", "==", fingerprint))
+
+      output=result.get()
+      if output:
              
          return jsonify({
             "authenticated": True,
 
         })
-       else:
+      else:
             return jsonify({"authenticated": False, "message": "Invalid session"}), 401
 
 
-     except:
+    except:
          return jsonify({"authenticated": False, "message": "Invalid session"}), 401
 @app.route('/logout',methods=['GET'])
 def logout():
@@ -235,7 +233,10 @@ def logout():
     return jsonify({"deleted":False}), 500
 
 @app.route('/add/project',methods=['POST'])
+@firebase_uid_required  # Apply the middleware here to protect the route
+
 def add_project():
+
 
 
     data = request.json
@@ -246,6 +247,7 @@ def add_project():
        return add_projects(data)
     
 @app.route('/best_projects',methods=['GET'])
+
 def best_projects():
       
       return ranking()
@@ -269,17 +271,19 @@ def profile_view():
           return profile_views(data)
 
 @app.route('/update/profile',methods=['POST'])
+@firebase_uid_required  # Apply the middleware here to protect the route
+
 def update_profile():
     data=request.json
     schema = UserSchema()
-    errors = schema.validate(data)
-    if errors:
-        return jsonify({"errordd": errors}), 400
-    else:
-     return update_profile_sql(data)
+   # errors = schema.validate(data)
+   # if errors:
+      #  return jsonify({"errordd": errors}), 400
+    #else:
+    return update_profile_sql(data)
 
 
-"""@app.route('/list/mentors',methods=['POST'])
+@app.route('/list/mentors',methods=['POST'])
 def list_of_mentors():
      data=request.json
      errors=list_of_mentors_schema().validate(data)
@@ -314,8 +318,10 @@ def accept_mentor():
      else:
          #required mentor_id(user_id),project_id
        return accept_mentor_sql(data)
-     """
+   
 @app.route('/list/projects',methods=['POST'])
+ # Apply the middleware here to protect the route
+
 def list_projects():
     data=request.json
     errors=list_projects_scheme().validate(data)
@@ -326,6 +332,7 @@ def list_projects():
         return list_projects_sql(data)
     
 @app.route('/list/current/projects',methods=['POST'])
+
 def list_current_projects():
     data=request.json
     errors=list_projects_scheme().validate(data)
@@ -345,6 +352,8 @@ def list_past_projects():
         return list_past_projects_sql(data)
     
 @app.route('/list/myprojects',methods=['POST'])
+
+  # Apply the middleware here to protect the route
 def list_myprojects():
     data=request.json
     errors=list_projects_scheme().validate(data)
@@ -356,6 +365,8 @@ def list_myprojects():
  
 
 @app.route('/apply/project',methods=['POST'])
+ # Apply the middleware here to protect the route
+
 def apply_project():
       data=request.json
       errors=apply_project_schema().validate(data)
@@ -364,6 +375,8 @@ def apply_project():
       else:
         return apply_project_sql(data)
 @app.route('/apply/project/status',methods=['POST'])
+@firebase_uid_required  # Apply the middleware here to protect the route
+
 def apply_project_status():
     
   data=request.json
@@ -374,6 +387,8 @@ def apply_project_status():
      return apply_project_status_sql(data)
 
 @app.route('/apply/project/status/takeback',methods=['POST'])
+@firebase_uid_required  # Apply the middleware here to protect the route
+
 def apply_project_status_takeback():
     data=request.json
     errors=apply_project_status_schema().validate(data)
@@ -384,20 +399,26 @@ def apply_project_status_takeback():
         return apply_project_status_takeback_sql(data)
 
 @app.route('/list/apply/status',methods=['POST'])
+@firebase_uid_required  # Apply the middleware here to protect the route
+
 def list_apply_project_():
     data=request.json
     errors=list_apply_project_schema().validate(data)
     return list_apply_project_sql(data)
 
 @app.route('/update/project/app/status',methods=['POST'])
+#@firebase_uid_required  # Apply the middleware here to protect the route
+
 def list_update_project_status():
     data=request.json
    # errors=update_project_status_schema().validate(data)
     return update_project_application_status_sql(data)
 
-#delete project by admin
+#delete project by admi
 
 @app.route('/admin/request',methods=['POST'])
+#@firebase_uid_required  # Apply the middleware here to protect the route
+
 
 def admin_request():
  #check user_id is admin or not  later 
@@ -409,25 +430,50 @@ def admin_request():
 
 
 @app.route('/admin/request/accept',methods=['POST'])
+#@firebase_uid_required  # Apply the middleware here to protect the route
+
 
 def admin_request_accept():
- #check user_id is admin or not  later 
  data=request.json
-#check whether user is admin  then request
 
  return admin_request_accept_sql(data)
+
+
+
+
+
 
 #discuss request to join
 
  
 @app.route('/list/users',methods=['GET'])
+#@firebase_uid_required  # Apply the middleware here to protect the route
+
 def list_users():
     
      return list_users_sql()
 
+@app.route('/notification',methods=['POST'])
+#@firebase_uid_required  # Apply the middleware here to protect the route
+
+def notification():
+
+ data=request.json
+ 
+ return notification_sql(data)
+
+@app.route('/verify/member',methods=['POST'])
+def verify_member():
+ data=request.json
+ return member_sql(data)
+
+@app.route('/change/sprint/status',methods=['POST'])
+def change_sprint_status():
+ data=request.json
+ return change_sprint_status_sql(data)
 
 
-#________PROJECT__________#
+#laavanya
 
 #1
 @app.route('/project/view_details', methods=['GET'])
@@ -509,45 +555,106 @@ STATUS_MAPPING = {
     "In Progress": "review",
     "Completed": "done"
 }
+def has_project_access(user_id, project_id):
+    """Check if the user is an admin, mod, or mentor for a project in Firestore."""
+    try:
+        project_ref = db.collection("projects").document(project_id).get()
+        if project_ref.exists:
+            project_data = project_ref.to_dict()
+            return user_id in project_data.get("admins", []) or \
+                   user_id in project_data.get("moderators", []) or \
+                   user_id in project_data.get("mentors", [])
+        return False
+    except Exception as e:
+        print(f"Error checking user access: {e}")
+        return False
 @app.route('/project/edit_tasks/add_task', methods=['POST'])
 def add_task_route():
+
     """API endpoint to add a task to a sprint with access control."""
     data = request.json
+    print(data)
     project_id = data.get("project_id")
     sprint_number = data.get("sprint_number")
     description = data.get("description")
     assigned_to = data.get("assigned_to")
     points = data.get("points")
     user_id = data.get("user_id")  
-    status = data.get("status", "To Do")  
+   # status = data.get("status", "To Do") 
+    status="To Do"
+    print(data,"lala",status) 
 
     if not all([project_id, sprint_number, description, assigned_to, points, user_id]):
         return jsonify({"error": "Missing required parameters"}), 400
 
-    if not has_project_access(user_id, project_id): 
-        return jsonify({"error": "Unauthorized"}), 403
+   # if not has_project_access(user_id, project_id): 
+      # return jsonify({"error": "Unauthorized"}), 403
     
     # **Check if Sprint is Open**
     sprint_status = get_sprint_status(project_id, sprint_number)
-    if sprint_status != "open":
-        return jsonify({"error": "Cannot add task. Sprint is not open."}), 400
+    if  sprint_status != "open":
+                return jsonify({"error": "Cannot add task. Sprint is not open."}), 400
 
     if status in STATUS_MAPPING:
-        status = STATUS_MAPPING[status]
+       status = STATUS_MAPPING[status]
     else:
         return jsonify({"error": "Invalid status value"}), 400
 
     try:
-        with engine.connect() as conn:
-            add_task(conn, project_id, sprint_number, description, assigned_to, points, status)
-        return jsonify({"message": "Task added successfully!"}), 201
+         add_task(project_id, sprint_number, description, assigned_to, points, status)
+         return jsonify({"message": "Task added successfully!"}), 201
+      
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/project/edit_tasks/update_task_status', methods=['POST','OPTIONS'])
+@cross_origin(origins="http://localhost:3000", supports_credentials=True)
+
+def update_task_routes():
+    data = request.json
+    print(data)
+    task_id = data.get("task_id")
+
+    if not task_id:
+        return jsonify({"error": "Missing required parameter: task_id"}), 400
+
+   # allowed_fields = ["description", "assigned_to", "status", "points"]
+    #updates = {key: data[key] for key in data if key in allowed_fields}
+
+  #  if not updates:
+     #   return jsonify({"error": "No fields provided to update"}), 400
+
+   # if "status" in updates and updates["status"] in STATUS_MAPPING:
+       # updates["status"] = STATUS_MAPPING[updates["status"]]
+    status=STATUS_MAPPING[data["status"]]
+    try:
+        with engine.connect() as conn:
+            print(f"Checking if task {task_id} exists...")  
+            result = conn.execute(
+                text("SELECT COUNT(*) FROM task WHERE id = :task_id"),
+                {"task_id": task_id}
+            ).scalar()
+
+            if result == 0:
+                return jsonify({"error": "Task ID does not exist"}), 404
+
+        
+        success = update_task_status(task_id, status)
+        if success:
+            return jsonify({"message": "Task updated successfully!"}), 200
+        else:
+            return jsonify({"error": "Failed to update task"}), 500
+
+    except Exception as e:
+        print(f"Database Error: {str(e)}")  
+        return jsonify({"error": str(e)}), 500
 #6
-@app.route('/project/edit_tasks/update_task', methods=['POST'])
+@app.route('/project/edit_tasks/update_task', methods=['POST','OPTIONS'])
+@cross_origin(origins="http://localhost:3000", supports_credentials=True)
+
 def update_task_route():
     data = request.json
+    print(data)
     task_id = data.get("task_id")
 
     if not task_id:
@@ -555,7 +662,7 @@ def update_task_route():
 
     allowed_fields = ["description", "assigned_to", "status", "points"]
     updates = {key: data[key] for key in data if key in allowed_fields}
-
+ 
     if not updates:
         return jsonify({"error": "No fields provided to update"}), 400
 
@@ -782,9 +889,34 @@ def create_sprint_route():
     if not all([user_id, project_id, name, start_date, end_date]):
         return jsonify({"error": "Missing required fields"}), 400
 
-    return jsonify(create_sprint(user_id, project_id, name, start_date, end_date))
+    return create_sprint(user_id, project_id, name, start_date, end_date)
+ 
 
-
-
+     
 if __name__ == "__main__":
     app.run(debug=True)
+
+
+
+
+
+
+#email notification of things
+
+
+
+       
+
+
+
+         
+
+
+
+
+    
+     
+     
+     
+
+
