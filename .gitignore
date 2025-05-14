@@ -16,6 +16,7 @@ backend/**/*$py.class
 backend/.env
 backend/*.log
 backend/key.json
+
 # Common
 .DS_Store
 *.pem
