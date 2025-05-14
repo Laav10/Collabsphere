@@ -39,3 +39,30 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Frontend - Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.vercel/
+frontend/.env*
+!frontend/.env.example
+
+# Backend - Flask
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.py[cod]
+backend/**/*$py.class
+backend/.env
+backend/*.log
+backend/key.json
+# Common
+.DS_Store
+*.pem
+
+*.log
+.idea/
+.vscode/
+
