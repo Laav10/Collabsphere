@@ -2,8 +2,12 @@ from sqlalchemy import create_engine,text
 import psycopg2
 from flask import Flask, request, jsonify
 import binascii
-#engine = create_engine('postgresql+psycopg2://postgres:Karn1234@localhost:5432/postgres', echo=True)
-engine = create_engine('postgresql://neondb_owner:npg_in9MJCT7Dzqu@ep-twilight-poetry-a1ynwudg-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require', echo=True)
+import os
+from dotenv import load_dotenv
+load_dotenv()
+db_url = os.getenv("NEON_DB_URL")
+engine = create_engine(db_url, echo=True)
+
 from Crypto.Cipher import AES
 from datetime import date
 

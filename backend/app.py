@@ -116,7 +116,7 @@ def verify():
         #data[user_name]=user_name
        
 
-        #print(decoded_token)
+      
         if decoded_token['uid'] != uid:
               return jsonify({"user_verfied": "false",}), 403
         # Verify fingerprint (implement fingerprint logic)
@@ -284,6 +284,7 @@ def update_profile():
 
 
 @app.route('/list/mentors',methods=['POST'])
+@firebase_uid_required
 def list_of_mentors():
      data=request.json
      errors=list_of_mentors_schema().validate(data)
@@ -293,6 +294,7 @@ def list_of_mentors():
       return list_of_mentors_sql(data)
 
 @app.route('/apply/mentors',methods=['POST'])
+@firebase_uid_required
 def apply_mentors():
      
      data=request.json
@@ -302,6 +304,7 @@ def apply_mentors():
      else:
        return apply_mentors_sql(data)
 @app.route('/apply/mentors/status/takeback',methods=['POST'])
+@firebase_uid_required
 def apply_mentors_status_takeback():
     data=request.json
     errors=apply_mentors_status_takeback_schema().validate(data)
@@ -310,6 +313,7 @@ def apply_mentors_status_takeback():
     else:
       return apply_mentors_takeback_sql(data)
 @app.route('/accept/mentors',methods=['POST'])
+@firebase_uid_required
 def accept_mentor():
      data=request.json
      errors=accept_mentor_schema().validate(data)
@@ -321,7 +325,7 @@ def accept_mentor():
    
 @app.route('/list/projects',methods=['POST'])
  # Apply the middleware here to protect the route
-
+@firebase_uid_required
 def list_projects():
     data=request.json
     errors=list_projects_scheme().validate(data)
@@ -332,7 +336,7 @@ def list_projects():
         return list_projects_sql(data)
     
 @app.route('/list/current/projects',methods=['POST'])
-
+@firebase_uid_required
 def list_current_projects():
     data=request.json
     errors=list_projects_scheme().validate(data)
@@ -343,6 +347,7 @@ def list_current_projects():
     
 
 @app.route('/list/past/projects',methods=['POST'])
+@firebase_uid_required
 def list_past_projects():
     data=request.json
     errors=list_projects_scheme().validate(data)
@@ -352,6 +357,7 @@ def list_past_projects():
         return list_past_projects_sql(data)
     
 @app.route('/list/myprojects',methods=['POST'])
+@firebase_uid_required
 
   # Apply the middleware here to protect the route
 def list_myprojects():
@@ -365,6 +371,7 @@ def list_myprojects():
  
 
 @app.route('/apply/project',methods=['POST'])
+@firebase_uid_required
  # Apply the middleware here to protect the route
 
 def apply_project():
@@ -407,7 +414,7 @@ def list_apply_project_():
     return list_apply_project_sql(data)
 
 @app.route('/update/project/app/status',methods=['POST'])
-#@firebase_uid_required  # Apply the middleware here to protect the route
+@firebase_uid_required  # Apply the middleware here to protect the route
 
 def list_update_project_status():
     data=request.json
@@ -417,7 +424,7 @@ def list_update_project_status():
 #delete project by admi
 
 @app.route('/admin/request',methods=['POST'])
-#@firebase_uid_required  # Apply the middleware here to protect the route
+@firebase_uid_required  # Apply the middleware here to protect the route
 
 
 def admin_request():
@@ -430,7 +437,7 @@ def admin_request():
 
 
 @app.route('/admin/request/accept',methods=['POST'])
-#@firebase_uid_required  # Apply the middleware here to protect the route
+@firebase_uid_required  # Apply the middleware here to protect the route
 
 
 def admin_request_accept():
@@ -447,14 +454,14 @@ def admin_request_accept():
 
  
 @app.route('/list/users',methods=['GET'])
-#@firebase_uid_required  # Apply the middleware here to protect the route
+@firebase_uid_required  # Apply the middleware here to protect the route
 
 def list_users():
     
      return list_users_sql()
 
 @app.route('/notification',methods=['POST'])
-#@firebase_uid_required  # Apply the middleware here to protect the route
+@firebase_uid_required  # Apply the middleware here to protect the route
 
 def notification():
 
@@ -463,11 +470,13 @@ def notification():
  return notification_sql(data)
 
 @app.route('/verify/member',methods=['POST'])
+@firebase_uid_required
 def verify_member():
  data=request.json
  return member_sql(data)
 
 @app.route('/change/sprint/status',methods=['POST'])
+@firebase_uid_required
 def change_sprint_status():
  data=request.json
  return change_sprint_status_sql(data)
@@ -477,6 +486,7 @@ def change_sprint_status():
 
 #1
 @app.route('/project/view_details', methods=['GET'])
+@firebase_uid_required
 def view_project_details():
     project_id = request.args.get("project_id")
     #print(f"Received project_id: {project_id}") 
@@ -493,6 +503,7 @@ def view_project_details():
 
 #2
 @app.route('/project/analytics', methods=['GET'])
+@firebase_uid_required
 def project_analytics():
     project_id = request.args.get("project_id")
     if not project_id:
@@ -513,7 +524,9 @@ def project_analytics():
 
 #3   
 @app.route('/project/view_tasks', methods=['GET'])
+@firebase_uid_required
 def view_sprint_tasks():
+    
     project_id = request.args.get("project_id")
     if not project_id:
         return jsonify({"error": "Missing project_id parameter"}), 400
@@ -532,7 +545,12 @@ def view_sprint_tasks():
     
 #4
 @app.route('/project/view_sprints', methods=['GET'])
+@firebase_uid_required
+
 def get_sprints_route():
+    uid = request.cookies.get('uid')
+    print(uid)
+
     """API endpoint to fetch sprints for a given project."""
     project_id = request.args.get("project_id")
     
@@ -569,6 +587,7 @@ def has_project_access(user_id, project_id):
         print(f"Error checking user access: {e}")
         return False
 @app.route('/project/edit_tasks/add_task', methods=['POST'])
+@firebase_uid_required
 def add_task_route():
 
     """API endpoint to add a task to a sprint with access control."""
@@ -609,6 +628,7 @@ def add_task_route():
 
 @app.route('/project/edit_tasks/update_task_status', methods=['POST','OPTIONS'])
 @cross_origin(origins="http://localhost:3000", supports_credentials=True)
+@firebase_uid_required
 
 def update_task_routes():
     data = request.json
@@ -651,6 +671,7 @@ def update_task_routes():
 #6
 @app.route('/project/edit_tasks/update_task', methods=['POST','OPTIONS'])
 @cross_origin(origins="http://localhost:3000", supports_credentials=True)
+@firebase_uid_required
 
 def update_task_route():
     data = request.json
@@ -693,6 +714,7 @@ def update_task_route():
     
 #7
 @app.route('/project/task/start', methods=['POST'])
+@firebase_uid_required
 def start_task():
     """Move task from To Do to In Progress"""
     data = request.json
@@ -718,6 +740,7 @@ def start_task():
 
 #8
 @app.route('/project/task/complete', methods=['POST'])
+@firebase_uid_required
 def complete_task():
     """Move task from In Progress to Completed"""
     data = request.json
@@ -742,6 +765,7 @@ def complete_task():
 
 #9
 @app.route('/project/task/reopen', methods=['POST'])
+@firebase_uid_required
 def reopen_task():
     """Move task from Completed to To Do"""
     data = request.json
@@ -766,6 +790,7 @@ def reopen_task():
 
 #10
 @app.route('/project/add_mod/eligible_users', methods=['GET'])
+@firebase_uid_required
 def get_eligible_users_route():
     """Fetch users eligible for moderator promotion"""
     project_id = request.args.get("project_id")
@@ -787,6 +812,7 @@ def get_eligible_users_route():
 
 #11. 
 @app.route('/project/add_mod/promote', methods=['POST'])
+@firebase_uid_required
 def promote_moderator_route(): 
     """Promote user to moderator role with proper checks"""
     data = request.json
@@ -809,6 +835,7 @@ def promote_moderator_route():
 
 #12
 @app.route('/project/add_mod/demote', methods=['POST'])
+@firebase_uid_required
 def demote_moderator_route():
     """Remove moderator role (Revert to Member)"""
     data = request.json
@@ -829,6 +856,7 @@ def demote_moderator_route():
 
 #13
 @app.route("/rate_member", methods=["POST"])
+@firebase_uid_required
 def rate_member():
     try:
         data = request.get_json()
@@ -853,6 +881,7 @@ def rate_member():
     
 #14
 @app.route("/rate_project", methods=["POST"])
+@firebase_uid_required
 def rate_project():
     """Endpoint to rate a project (only if user is not a project member)"""
     try:
@@ -877,6 +906,7 @@ def rate_project():
     
 #15 
 @app.route('/project/create_sprint', methods=['POST'])
+@firebase_uid_required
 def create_sprint_route():
     """API endpoint to create a sprint."""
     data = request.get_json()
