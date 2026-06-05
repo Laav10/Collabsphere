@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import TeamMemberDropdown from "@/components/team-members-dropdown";
 import { useUserContext } from "@/lib/usercontext";
+import { API_BASE } from "@/lib/api"
 
 interface TaskFormProps {
   sprint_id?: number;
@@ -37,7 +38,7 @@ export default function TaskForm({ sprint_id, projectId, onTaskAdded }: TaskForm
       sprint_id,description ,weightage ,assignee, projectId
     });
     try {
-      const response = await fetch("http://127.0.0.1:5000/project/edit_tasks/add_task", {
+      const response = await fetch(`${API_BASE}/project/edit_tasks/add_task`, {
         method: "POST",
         credentials: "include",
         headers: {

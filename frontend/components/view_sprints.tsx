@@ -1,10 +1,11 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Loader2, Calendar } from "lucide-react"
 import { format } from "date-fns"
 import { Badge } from "@/components/ui/badge"
+import { API_BASE } from "@/lib/api"
 
 interface Sprint {
   name: string;
@@ -33,7 +34,7 @@ const ProjectSprints = ({ project_id, onLatestSprintSelect, label }: ProjectSpri
       try {
         setLoading(true);
         const response = await fetch(
-          `http://127.0.0.1:5000/project/view_sprints?project_id=${project_id}`,
+          `${API_BASE}/project/view_sprints?project_id=${project_id}`,
           {
             method: "GET",
             credentials: "include",

@@ -1,22 +1,20 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup,EmailAuthProvider,linkWithCredential} from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, EmailAuthProvider, linkWithCredential } from "firebase/auth";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAgu7M6r1guWru4bSkFNuw87GyTxjz6xaI",
-  authDomain: "collabsphere-4986c.firebaseapp.com",
-  projectId: "collabsphere-4986c",
-  storageBucket: "collabsphere-4986c.firebasestorage.app",
-  messagingSenderId: "928391035636",
-  appId: "1:928391035636:web:3b124c73cc88dbe750fca1",
-  measurementId: "G-XW6SQMT87H"
+  apiKey: "AIzaSyB3bsjK29_0OYPZ80cVu3JHzLXMaBeBA_U",
+  authDomain: "collabsphere2.firebaseapp.com",
+  projectId: "collabsphere2",
+  storageBucket: "collabsphere2.firebasestorage.app",
+  messagingSenderId: "584815422891",
+  appId: "1:584815422891:web:dafca451b85dd06eb3b6ee",
+  measurementId: "G-3PL6T6VQFB"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-export { auth, provider, signInWithPopup,db,EmailAuthProvider,linkWithCredential };
+export { auth, provider, signInWithPopup, db, EmailAuthProvider, linkWithCredential };

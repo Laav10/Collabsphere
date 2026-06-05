@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -6,6 +6,7 @@ import ProjectCard from "@/components/project-card"
 import CreateProjectButton from "@/components/create-project-button"
 import Navbar from "@/components/navbar"
 import { useUserContext } from "@/lib/usercontext"
+import { API_BASE } from "@/lib/api"
 
 interface Project {
   admin_id: number
@@ -27,39 +28,33 @@ const {user } = useUserContext()
 const userlocal = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
 const parsedUser = userlocal ? JSON.parse(userlocal) : null;
   const userId = user?.id ? user?.id:parsedUser?.id;
-  // Fetch projects from the API
+  // Fetch projects from the API — wait for userId to be available
   useEffect(() => {
+    if (!userId) return;
     const fetchProjects = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:5000/list/myprojects", {
+        const response = await fetch(`${API_BASE}/list/myprojects`, {
           method: "POST",
-          credentials: "include", 
-          headers: {
-            "Content-Type": "application/json",
-          },
-           // Replace with the actual user ID
-           body: JSON.stringify({
-          
-            user_id: userId, //us Use the user ID from the context
-            
-          }),
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId }),
         })
 
         if (!response.ok) {
           console.log("Error:", response.status)
-       
+          return
         }
 
         const data = await response.json()
         console.log("API Response:", data)
-        setProjectsData(data.project) // Set the project data from the API response
+        setProjectsData(data.project ?? [])
       } catch (error) {
         console.error("Error fetching projects:", error)
       }
     }
 
     fetchProjects()
-  }, [])
+  }, [userId])
 
   // Filter projects based on their status
   const currentProjects = projectsData.filter((project) => project.status === "Active")

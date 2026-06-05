@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import TeamMemberCard from "@/components/team-member-card";
 import { Search } from "lucide-react";
 import Navbar from "@/components/navbar";
+import { API_BASE } from "@/lib/api"
 
 export default function TeamPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -14,7 +15,7 @@ export default function TeamPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:5000/list/users", {
+        const response = await fetch(`${API_BASE}/list/users`, {
           method: "GET",
           credentials: "include",
           headers: {
@@ -118,9 +119,9 @@ export default function TeamPage() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row">
+    <div className="flex min-h-screen bg-[#09090b]">
       <Navbar activeNav="users" setActiveNav={() => {}} />
-      <main className="min-h-screen bg-black text-white p-4 md:p-8">
+      <main className="flex-1 min-w-0 text-white p-4 md:p-8 overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold text-pink-500 mb-8">
             Team Members

@@ -1,4 +1,4 @@
-
+﻿
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Clock, Users, Briefcase, Code, Flag, Github, ArrowLeft, Star } from "lucide-react"
@@ -23,6 +23,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { Slider } from "@/components/ui/slider" // Import Slider for rating
+import { API_BASE } from "@/lib/api"
 
 // Update interface to match the actual API response
 interface ProjectDetails {
@@ -46,7 +47,7 @@ interface ProjectDetailsProps {
 
 const fetchProjectDetails = async(project_id: number) => {
   try {
-    const response = await fetch(`http://127.0.0.1:5000/project/view_details?project_id=${project_id}`, {
+    const response = await fetch(`${API_BASE}/project/view_details?project_id=${project_id}`, {
       method: "GET",
       credentials: "include",
       headers: {
@@ -70,7 +71,7 @@ const fetchProjectDetails = async(project_id: number) => {
 // Function to update project status
 const updateProjectStatus = async (project_id: number, newStatus: string, userId: string) => {
   try {
-    const response = await fetch(`http://127.0.0.1:5000/project/update_status`, {
+    const response = await fetch(`${API_BASE}/project/update_status`, {
       method: "POST",
       credentials: "include",
       headers: {
@@ -98,7 +99,7 @@ const updateProjectStatus = async (project_id: number, newStatus: string, userId
 // New function to submit project rating
 const submitProjectRating = async (project_id: number, userId: string, rating: number) => {
   try {
-    const response = await fetch(`http://127.0.0.1:5000/project/give_rating`, {
+    const response = await fetch(`${API_BASE}/project/give_rating`, {
       method: "POST",
       credentials: "include",
       headers: {

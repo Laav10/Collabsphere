@@ -1,30 +1,41 @@
-import firebase_admin
-from firebase_admin import credentials, auth,firestore
-from flask import Flask, request, jsonify,make_response
-from flask_cors import CORS  # Import CORS
-from flask_cors import cross_origin
-
+﻿import firebase_admin
+from firebase_admin import credentials, auth, firestore
+from flask import Flask, request, jsonify, make_response
+from flask_cors import CORS, cross_origin
+import os
 import time
 from data_valid import UserSchema,add_project_schema,first_login_schema,list_of_mentors_schema,apply_mentors_schema,apply_mentors_status_takeback_schema
 from data_valid import accept_mentor_schema,apply_project_schema,apply_project_status_schema,list_apply_project_schema,list_projects_scheme
 from datetime import datetime,timedelta
-from auth import  firebase_uid_required  # Import auth_bp
-
+from auth import firebase_uid_required
 from smtp import send_email
 from sql import *
-#from sql import add_projects,ranking,first_logins,profile_views,list_of_mentors_sql,apply_mentors_sql,apply_project_sql
-#from sql import apply_project_status_sql,list_apply_project_sql,update_project_application_status_sql,apply_project_status_takeback_sql,update_profile_sql,accept_mentor_sql,notification_sql
-#from sql import apply_mentors_takeback_sql,list_users_sql,list_projects_sql,list_current_projects_sql,list_past_projects_sql,admin_request_sql,admin_request_accept_sql,list_myprojects_sql,user_insert_google_sql
 from google.cloud.firestore_v1 import FieldFilter
-# Initialize Firebase Admin
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# ── Environment ────────────────────────────────────────────────────────────────
+IS_PROD    = os.getenv("FLASK_ENV", "development") == "production"
+# Comma-separated list of allowed frontend origins, e.g.:
+#   ALLOWED_ORIGINS=https://collabsphere.vercel.app,https://www.collabsphere.in
+ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:52843,http://127.0.0.1:3000").split(",")]
+
+COOKIE_SECURE   = IS_PROD          # True in prod (requires HTTPS)
+COOKIE_SAMESITE = "None" if IS_PROD else "Lax"
+
+# ── Firebase Admin ─────────────────────────────────────────────────────────────
 cred = credentials.Certificate("key.json")
 firebase_admin.initialize_app(cred)
-db = firestore.client()
+db    = firestore.client()
 users = db.collection('users')
 
+# ── Flask app ──────────────────────────────────────────────────────────────────
 app = Flask(__name__)
 
-CORS(app,supports_credentials=True)
+CORS(app,
+     origins=ALLOWED_ORIGINS,
+     supports_credentials=True)
 
 @app.route('/check',methods=['GET'])
 def check():
@@ -40,7 +51,7 @@ def verify_email():
 
             fingerprint = data.get("fingerprint")
 
-            decoded_token = auth.verify_id_token(id_token)  # Verify token
+            decoded_token = auth.verify_id_token(id_token, clock_skew_seconds=10)
        
             if decoded_token['uid'] != uid:
                return jsonify({"user_verfied": "false"}), 403
@@ -50,18 +61,14 @@ def verify_email():
            
             response = make_response(jsonify({"user_verified": True, "message": "Cookie Set"}))
             response.set_cookie(
-            "uid", uid, 
-            httponly=True,  # Prevent JS access (security)
-            secure=True,  # Only allow over HTTPS
-            samesite="None",  # Restrict cross-site access
-            max_age=60*60*24*3, ) # 3 days expiration
-            
+            "uid", uid,
+            httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE,
+            max_age=60*60*24*3)
+
             response.set_cookie(
-            "fingerprint", fingerprint, 
-            httponly=True,  # Prevent JS access (security)
-            secure=True,  # Only allow over HTTPS
-            samesite="None",  # Restrict cross-site access
-            max_age=60*60*24*3, ) 
+            "fingerprint", fingerprint,
+            httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE,
+            max_age=60*60*24*3) 
 
             try:
               
@@ -94,7 +101,6 @@ def transform_email(username):
 @app.route('/verify/google', methods=['POST'])
 def verify():
     #new sign in
-    time.sleep(5)  # Add a 2-second delay before verifying
 
     data = request.json
     id_token = data.get("idToken")
@@ -105,7 +111,7 @@ def verify():
     fingerprint = data.get("fingerprint")
     #print(data)
     try:
-        decoded_token = auth.verify_id_token(id_token)  # Verify token
+        decoded_token = auth.verify_id_token(id_token, clock_skew_seconds=10)
         user_name = decoded_token.get('name')
         print(f"User name: {user_name}")
         user_name = user_name.replace("-IIITK", "").strip()
@@ -136,34 +142,28 @@ def verify():
            # Add to Firestore
             print("success")
             print("ds")
-            response = make_response(jsonify({"user_verified": True, "message": "cookie set","roll_no":data['roll_no']}))
-            response.set_cookie(
-            "fingerprint", fingerprint, 
-         
-            httponly=True,  # Prevent JS access (security)
-            
-            secure=True,  # Only allow over HTTPS
-            samesite="None",  # Restrict cross-site access
-            max_age=60*60*24*3,  # 7 days expiration
-            
-            )
-            response.set_cookie(
-            "uid", uid, 
-         
-            httponly=True,  # Prevent JS access (security)
-            secure=True,  # Only allow over HTTPS
-            samesite="None",  # Restrict cross-site access
-            max_age=60*60*24*3,  # 7 days expiration
-            
-            )
-            user_insert_google_sql(data)
+            # Insert/update user in postgres (non-blocking — login succeeds even if DB is down)
+            try:
+                user_insert_google_sql(data)
+            except Exception as sql_err:
+                print("SQL insert failed (non-fatal):", sql_err)
 
-           # print(response.headers)
+            response = make_response(jsonify({
+                "user_verified": True,
+                "message": "cookie set",
+                "roll_no": data['roll_no']
+            }))
+            response.set_cookie("fingerprint", fingerprint,
+                httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE,
+                max_age=60*60*24*3)
+            response.set_cookie("uid", uid,
+                httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE,
+                max_age=60*60*24*3)
             return response
-               #add user in db if not present
+
         except Exception as e:
-             print(e,"s")
-             return jsonify({"error": str(e)}), 500
+            print("verify/google inner error:", e)
+            return jsonify({"error": str(e)}), 500
 
         
     except Exception as e:
@@ -177,60 +177,37 @@ def get_roll_no(uid):
 #uid="cpV0OfOaqvfQGdGMI6c1vkjqTEg2"
 #get_roll_no(uid)
  
-@app.route('/auto_login',methods=['GET','POST'])
+@app.route('/auto_login', methods=['GET'])
 def auto_login():
-    if request.method=='POST':
-     data=request.json()
-     #    uid=request.cookies.get("uid")
-       #  print(uid)
-       #take fingerprint frontend
-       
-     uid=request.cookies.get("uid")
+    uid = request.cookies.get("uid")
+    fingerprint = request.cookies.get("fingerprint")
 
-     
-     fingerprint=data["fingerprint"]
-
-     if not uid or not fingerprint:
-        return jsonify({"authenticated": False, "message": "Session expired"}), 401
-     
+    if not uid or not fingerprint:
+        return jsonify({"authenticated": False, "message": "No session"}), 401
 
     try:
-       #user=auth.get_user(uid)
-      # use firebase client and set expiration time
-      three_days_ago = datetime.utcnow() - timedelta(days=3)
-
-# Convert the datetime to a string or timestamp format suitable for the database
-      three_days_ago_str = three_days_ago.strftime('%Y-%m-%dT%H:%M:%S')  # Example format
-
-# Apply the filters: uid, fingerprint, and created_at within the last 3 days
-      result = users.where(filter=FieldFilter("uid", "==", uid)) \
-              .where(filter=FieldFilter("fingerprint", "==", fingerprint)) \
-              .where(filter=FieldFilter("created_at", "<=", three_days_ago_str))
-       #result = users.where(filter=FieldFilter("uid", "==", uid)) \
-              #.where(filter=FieldFilter("fingerprint", "==", fingerprint))
-
-      output=result.get()
-      if output:
-             
-         return jsonify({
-            "authenticated": True,
-
-        })
-      else:
-            return jsonify({"authenticated": False, "message": "Invalid session"}), 401
-
-
-    except:
-         return jsonify({"authenticated": False, "message": "Invalid session"}), 401
-@app.route('/logout',methods=['GET'])
+        result = users.where(filter=FieldFilter("uid", "==", uid)) \
+                      .where(filter=FieldFilter("fingerprint", "==", fingerprint))
+        output = result.get()
+        if output:
+            try:
+                roll_no = get_roll_no(uid)
+            except Exception:
+                roll_no = None
+            return jsonify({"authenticated": True, "roll_no": roll_no})
+        return jsonify({"authenticated": False, "message": "Invalid session"}), 401
+    except Exception as e:
+        print("auto_login error:", e)
+        return jsonify({"authenticated": False, "message": "Invalid session"}), 401
+@app.route('/logout', methods=['GET'])
 def logout():
- try:
-    response = make_response(jsonify({"success": True, "message": "Logged out"}))
-    response.delete_cookie("uid")
-    response.delete_cookie("fingerprint")
-    return jsonify({"deleted":True}), 200
- except Exception as e:
-    return jsonify({"deleted":False}), 500
+    try:
+        response = make_response(jsonify({"success": True}))
+        response.delete_cookie("uid", samesite=COOKIE_SAMESITE, secure=COOKIE_SECURE)
+        response.delete_cookie("fingerprint", samesite=COOKIE_SAMESITE, secure=COOKIE_SECURE)
+        return response
+    except Exception as e:
+        return jsonify({"deleted": False}), 500
 
 @app.route('/add/project',methods=['POST'])
 @firebase_uid_required  # Apply the middleware here to protect the route
@@ -336,7 +313,6 @@ def list_projects():
         return list_projects_sql(data)
     
 @app.route('/list/current/projects',methods=['POST'])
-@firebase_uid_required
 def list_current_projects():
     data=request.json
     errors=list_projects_scheme().validate(data)
@@ -347,7 +323,6 @@ def list_current_projects():
     
 
 @app.route('/list/past/projects',methods=['POST'])
-@firebase_uid_required
 def list_past_projects():
     data=request.json
     errors=list_projects_scheme().validate(data)
@@ -356,17 +331,16 @@ def list_past_projects():
     else:
         return list_past_projects_sql(data)
     
-@app.route('/list/myprojects',methods=['POST'])
+@app.route('/list/myprojects', methods=['POST'])
 @firebase_uid_required
-
-  # Apply the middleware here to protect the route
 def list_myprojects():
-    data=request.json
-    errors=list_projects_scheme().validate(data)
+    data = request.json or {}
+    if not data.get('user_id'):
+        return jsonify({"errors": "user_id required"}), 400
+    errors = list_projects_scheme().validate(data)
     if errors:
-        return  jsonify({"errors":errors}),400
-    else:
-        return list_myprojects_sql(data)
+        return jsonify({"errors": errors}), 400
+    return list_myprojects_sql(data)
      
  
 
@@ -453,12 +427,9 @@ def admin_request_accept():
 #discuss request to join
 
  
-@app.route('/list/users',methods=['GET'])
-@firebase_uid_required  # Apply the middleware here to protect the route
-
+@app.route('/list/users', methods=['GET'])
 def list_users():
-    
-     return list_users_sql()
+    return list_users_sql()
 
 @app.route('/notification',methods=['POST'])
 @firebase_uid_required  # Apply the middleware here to protect the route

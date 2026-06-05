@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import ProjectLayout from "./project-layout";
 import Footerpage from "@/components/Footerpage";
 
-// MUI icons
 import GroupsIcon from "@mui/icons-material/Groups";
 import ExploreIcon from "@mui/icons-material/Explore";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
@@ -79,36 +78,34 @@ export default function FeaturesSection({ data }: FeaturesSectionProps) {
     <div className="w-full bg-[#09090b] text-white">
 
       {/* ── Features ─────────────────────────────────────── */}
-      <section className="py-24 px-4 md:px-8 lg:px-16 overflow-hidden">
+      <section className="py-16 sm:py-20 lg:py-24 px-4 sm:px-6 md:px-8 lg:px-16 overflow-hidden">
         <div className="max-w-7xl mx-auto">
 
-          <p className="text-xs tracking-[0.25em] uppercase text-pink-500/70 mb-4 font-medium">
-            What you get
-          </p>
-          <h2 className="text-4xl md:text-[3.25rem] font-bold leading-tight mb-4">
-            Built for student
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-fuchsia-400 to-purple-400">
-              builders.
-            </span>
-          </h2>
-          <p className="text-zinc-400 max-w-md mb-16 leading-relaxed">
-            Every feature on CollabSphere is designed around one thing — helping
-            students ship real work with real teams.
-          </p>
+          {/* Header — centered on mobile */}
+          <div className="flex flex-col items-center text-center lg:items-start lg:text-left mb-10 sm:mb-14">
+            <p className="text-xs tracking-[0.25em] uppercase text-pink-500/70 mb-3 font-medium">
+              What you get
+            </p>
+            <h2 className="text-3xl sm:text-4xl md:text-[3rem] font-bold leading-tight mb-3">
+              Built for student{" "}
+              <span className="text-white">builders.</span>
+            </h2>
+            <p className="text-zinc-400 max-w-md leading-relaxed text-sm sm:text-base">
+              Every feature on CollabSphere is designed around one thing — helping
+              students ship real work with real teams.
+            </p>
+          </div>
 
-          <div className="grid lg:grid-cols-[1fr_420px] gap-10 items-start">
+          {/* Cards + 3D side-by-side on lg, stacked below */}
+          <div className="grid lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-6 lg:gap-10 items-start">
 
-            {/* Feature cards */}
-            <div className="grid sm:grid-cols-2 gap-4">
+            {/* Feature cards — 1 col on xs, 2 col on sm+ */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {features.map(({ icon: Icon, title, description, accent, bg, border }) => (
                 <div
                   key={title}
-                  className="group relative rounded-2xl p-6 flex flex-col gap-4 transition-all duration-300 hover:-translate-y-1"
-                  style={{
-                    background: bg,
-                    border: `1px solid ${border}`,
-                  }}
+                  className="group relative rounded-2xl p-5 sm:p-6 flex flex-col gap-3 sm:gap-4 transition-all duration-300 hover:-translate-y-1"
+                  style={{ background: bg, border: `1px solid ${border}` }}
                   onMouseEnter={(e) => {
                     (e.currentTarget as HTMLDivElement).style.boxShadow = `0 8px 32px ${accent}22`;
                   }}
@@ -120,22 +117,21 @@ export default function FeaturesSection({ data }: FeaturesSectionProps) {
                     className="transition-transform duration-300 group-hover:scale-110 w-fit"
                     style={{ color: accent }}
                   >
-                    <Icon style={{ fontSize: 28 }} />
+                    <Icon style={{ fontSize: 26 }} />
                   </span>
                   <div>
-                    <h3 className="font-semibold text-white mb-1.5">{title}</h3>
-                    <p className="text-zinc-400 text-sm leading-relaxed">{description}</p>
+                    <h3 className="font-semibold text-white mb-1 text-sm sm:text-base">{title}</h3>
+                    <p className="text-zinc-400 text-xs sm:text-sm leading-relaxed">{description}</p>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* 3D scene */}
-            <div className="relative h-[440px] lg:h-[560px] rounded-3xl overflow-hidden border border-pink-900/40 bg-zinc-950/60 sticky top-8">
+            {/* 3D scene — hidden on xs, shown on sm+, sticky only on lg */}
+            <div className="hidden sm:block relative h-[300px] md:h-[400px] lg:h-[560px] rounded-3xl overflow-hidden border border-pink-900/40 bg-zinc-950/60 lg:sticky lg:top-8">
               <Feature3DScene />
-              {/* pulse dot only, no "Live" text */}
               <div className="absolute inset-0 pointer-events-none">
-                <span className="absolute top-5 right-5 w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
+                <span className="absolute top-4 right-4 w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
               </div>
             </div>
           </div>

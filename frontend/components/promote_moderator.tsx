@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
+import { API_BASE } from "@/lib/api"
 
 interface PromoteResponse {
   message: string;
@@ -17,7 +18,7 @@ const PromoteUser = () => {
         user_id: "23bcy25",
       };
       const response = await fetch(
-        "http://127.0.0.1:5000/project/add_mod/promote",
+        `${API_BASE}/project/add_mod/promote`,
         {
           method: "POST",
           credentials: "include",

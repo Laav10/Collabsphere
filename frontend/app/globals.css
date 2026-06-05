@@ -2,9 +2,18 @@
 @import "tw-animate-css";
 
 @keyframes cell-ripple {
-  0%   { opacity: 0.06; background-color: rgb(236 72 153 / 0.28); }
-  50%  { opacity: 0.55; background-color: rgb(217 70 239 / 0.45); }
-  100% { opacity: 0.06; background-color: transparent; }
+  0%   { opacity: 0.4; }
+  50%  { opacity: 0.8; }
+  100% { opacity: 0.4; }
+}
+
+.animate-cell-ripple {
+  animation: cell-ripple var(--duration, 200ms) ease-out 1 var(--delay, 0ms);
+}
+
+@keyframes aurora {
+  from { background-position: 50% 50%, 50% 50%; }
+  to   { background-position: 350% 50%, 350% 50%; }
 }
 
 @custom-variant dark (&:is(.dark *));

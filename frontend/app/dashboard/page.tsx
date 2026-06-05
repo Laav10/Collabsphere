@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
@@ -6,14 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import {
-  Search,
-  User,
-  Clock,
-} from "lucide-react"
+import { Search, User, Clock } from "lucide-react"
 import Navbar from "@/components/navbar"
 import { useUserContext } from "@/lib/usercontext"
 import Notification from "@/components/notification"
+import { API_BASE } from "@/lib/api"
 
 interface Project {
   admin_id: number
@@ -39,33 +36,27 @@ export default function ProjectsPage() {
   const parsedUser = userlocal ? JSON.parse(userlocal) : null;
   const userId = user?.id ? user?.id:parsedUser?.id;
  
-  // Fetch projects from the API
+  // Fetch projects from the API — wait for userId to hydrate from localStorage
   useEffect(() => {
+    if (!userId) return;
     const fetchProjects = async () => {
       try {
         setLoading(true)
-        const response = await fetch("http://127.0.0.1:5000/list/projects", {
+        const response = await fetch(`${API_BASE}/list/projects`, {
           method: "POST",
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            user_id: userId, 
-          }),
+          body: JSON.stringify({ user_id: userId }),
         })
 
         if (!response.ok) {
-          console.error("Error:", response.status);
-          throw new Error(`HTTP error! Status: ${response.status}`) 
+          throw new Error(`HTTP error! Status: ${response.status}`)
         }
 
         const data = await response.json()
-        console.log("API Response:", data)
-        
-        // Check if data has a project property (based on the response structure)
-        const projectData = data.project || []
-        setProjects(projectData)
+        setProjects(data.project ?? [])
         setError(null)
       } catch (error) {
         console.error("Error fetching projects:", error)
@@ -76,12 +67,12 @@ export default function ProjectsPage() {
     }
 
     fetchProjects()
-  }, [])
+  }, [userId])
 
   // Handle applying to a project
   const handleApplyToProject = async (projectId: number) => {
     try {
-      const response = await fetch("http://127.0.0.1:5000/apply/project", {
+      const response = await fetch(`${API_BASE}/apply/project`, {
         method: "POST",
         credentials: "include",
         headers: {

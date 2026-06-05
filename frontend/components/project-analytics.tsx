@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import {
@@ -33,6 +33,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { API_BASE } from "@/lib/api"
 
 // Define interfaces for the analytics data
 interface Sprint {
@@ -99,7 +100,7 @@ export default function ProjectAnalytics({ projectId }: ProjectAnalyticsProps) {
         setLoading(true);
         setError(null);
 
-        const apiUrl = `http://127.0.0.1:5000/project/analytics?project_id=${projectId}`;
+        const apiUrl = `${API_BASE}/project/analytics?project_id=${projectId}`;
         const response = await fetch(apiUrl, {
           method: "GET",
           credentials: "include",

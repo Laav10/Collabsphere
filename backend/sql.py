@@ -46,24 +46,23 @@ def decrypt_message(encrypted_message, secret_key):
     return cipher.decrypt_and_verify(ciphertext, tag).decode()
 
 def user_insert_google_sql(data):
-
     try:
-        # Connect to the database
         with engine.connect() as conn:
-            RESULT1=conn.execute(text("""select * from "User" where roll_no=:val1"""),{
-
-              "val1":data['roll_no']
-
-
+            # Upsert: insert if not exists, update name/email if already registered
+            query = text("""
+                INSERT INTO "User" (roll_no, name, email)
+                VALUES (:roll_no, :name, :email)
+                ON CONFLICT (roll_no) DO UPDATE
+                    SET name  = EXCLUDED.name,
+                        email = EXCLUDED.email
+            """)
+            conn.execute(query, {
+                "roll_no": data["roll_no"],
+                "name":    data["user_name"],
+                "email":   data["email"],
             })
-
-            if(RESULT1.rowcount>0):
-                return jsonify({"user":"already exist"}), 401
-
-            query = text("""INSERT INTO "User" (roll_no, name,email) VALUES (:roll_no, :name,:email)""")
-            conn.execute(query, {"roll_no":data["roll_no"], "name": data['user_name'],"email":data['email']})
-            conn.commit()  # Commit the transaction
-        return  jsonify({"user":"registered successfully"})
+            conn.commit()
+        return jsonify({"user": "ok"})
     except Exception as e:
         return f"Error: {str(e)}"
 
@@ -889,8 +888,11 @@ LEFT JOIN projectapplication AS pa
 
      
 def list_current_projects_sql(data):
+   user_id = data.get('user_id')
+   if not user_id:
+       return jsonify({"error": "user_id required"}), 400
    with engine.connect() as conn:
-      
+
     try:
        result=conn.execute(text("""select p.* ,pm.role
                                 from "Project" as p
@@ -898,15 +900,8 @@ def list_current_projects_sql(data):
                                 on  p.project_id=pm.project_id
                                  WHERE pm.member_id = :val1
                                 and p.status in ('Planning','Active')
-      
-                                         
-       
        """),
-                           
-                           {
-                              
-                        'val1':data['user_id']
-                              })
+                           {'val1': user_id})
        rows=result.fetchall()
        data = [
     {   
@@ -932,7 +927,9 @@ def list_current_projects_sql(data):
     
 
 def list_past_projects_sql(data):
-       
+       user_id = data.get('user_id')
+       if not user_id:
+           return jsonify({"error": "user_id required"}), 400
        with engine.connect() as conn:
           try:
              result=conn.execute(text("""select p.* ,pm.role
@@ -941,18 +938,8 @@ def list_past_projects_sql(data):
                                 on  p.project_id=pm.project_id
                                  WHERE pm.member_id = :val1
                                 and p.status ='Completed'
-      
-                                         
-       
        """),
-                                 
-                                 {
-
-
-                          'val1': data['user_id']
-              
-
-                                 })
+                                 {'val1': user_id})
              rows=result.fetchall()
              data = [
     {   
@@ -977,11 +964,9 @@ def list_past_projects_sql(data):
           
 
 def list_myprojects_sql(data):
-   
-
-     #show  pending ,part of project,apply ,closed
-     #pending project projectapplication
-     #part of  project  projetct project members
+    user_id = data.get('user_id')
+    if not user_id:
+        return jsonify({"error": "user_id required"}), 400
 
     with engine.connect() as conn:
      try:
@@ -1004,33 +989,25 @@ LEFT JOIN projectapplication AS pa
 
 
 """
-
-
-
           ),{
-             
-  'val1':data['user_id']
-
+  'val1': user_id
           })
-          rows=result.fetchall()
-          data = [
-    {   
-        "project_id": row[0],  
-        "admin_id": row[1],  
-        "title": row[2],  
-        "description": row[3],  
-        "start_date": row[4],  
-        "end_date": row[5],  
-        "members_required": row[6],  
-        "status": row[9],  
-        "tags": row[8]  
+          rows = result.fetchall()
+          rows_data = [
+    {
+        "project_id": row[0],
+        "admin_id": row[1],
+        "title": row[2],
+        "description": row[3],
+        "start_date": str(row[4]) if row[4] else None,
+        "end_date": str(row[5]) if row[5] else None,
+        "members_required": row[6],
+        "status": row[9],
+        "tags": row[8]
     }
-      for row in rows
+    for row in rows
 ]
-           
-
-
-          return jsonify({"project":data})
+          return jsonify({"project": rows_data})
      except Exception as e:
             return jsonify({"error": str(e)}), 500
 

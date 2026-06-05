@@ -1,4 +1,5 @@
-import { useState } from "react";
+﻿import { useState } from "react";
+import { API_BASE } from "@/lib/api"
 interface TaskData {
   project_id: number;
   sprint_number: number;
@@ -36,7 +37,7 @@ const AddTaskForm = () => {
     try {
       // Make a POST request to the backend API
       const response = await fetch(
-        "http://127.0.0.1:5000/project/edit_tasks/add_task",
+        `${API_BASE}/project/edit_tasks/add_task`,
         {
           method: "POST",
           credentials: "include", // Include cookies or authentication tokens

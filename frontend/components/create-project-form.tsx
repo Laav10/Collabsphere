@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import type React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -16,6 +16,7 @@ import { CalendarIcon, X, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useUserContext } from "@/lib/usercontext";
+import { API_BASE } from "@/lib/api"
 
 interface CreateProjectFormProps {
   onSuccess?: () => void;
@@ -75,7 +76,7 @@ export default function CreateProjectForm({
     console.log(techStack.join(","))
     try {
       // Make the API call using your existing API endpoint
-      const response = await fetch("http://127.0.0.1:5000/add/project", {
+      const response = await fetch(`${API_BASE}/add/project`, {
         method: "POST",
         credentials: "include", // Include cookies if needed
         headers: {

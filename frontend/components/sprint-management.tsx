@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -10,6 +10,7 @@ import { useUserContext } from "@/lib/usercontext"
 import ProjectTasks from "@/components/view_tasks" // Import the updated component
 import CreateSprint from "./create_sprint"
 import TeamMemberDropdown from "./team-members-dropdown"
+import { API_BASE } from "@/lib/api"
 
 interface SprintManagementProps {
   project_id: number;
@@ -35,8 +36,8 @@ export default function SprintManagement({ project_id, projectTitle }: SprintMan
 
   const fetchSprints = async () => {
     // Fetch sprints from API
-   // const response = await fetch(`http://127.0.0.1:5000/project/view_sprints?project_id=${project_id}`)
-   const apiUrl = `http://127.0.0.1:5000/project/view_sprints?project_id=${project_id}`;
+   // const response = await fetch(`${API_BASE}/project/view_sprints?project_id=${project_id}`)
+   const apiUrl = `${API_BASE}/project/view_sprints?project_id=${project_id}`;
 
     const response = await fetch(apiUrl, {
       method: "GET",

@@ -1,17 +1,13 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation"; // Import for navigation
 import { auth, provider } from "./firebase";
-import { 
-  signInWithPopup, 
-  signInWithEmailAndPassword, 
-  signOut, 
-  deleteUser 
-} from "firebase/auth";
+import { signInWithPopup, signInWithEmailAndPassword, signOut, deleteUser } from "firebase/auth";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 import { Button } from "./ui/button";
 import { useUserContext } from "../lib/usercontext";
+import { API_BASE } from "@/lib/api";
 
 const getFingerprint = async () => {
   const fp = await FingerprintJS.load();
@@ -26,13 +22,19 @@ const GoogleLogin = () => {
   const [user_password, set_user_password] = useState("");
 
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/auto_login", {
+    fetch(`${API_BASE}/auto_login`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
     })
-    .then(res => res.json())
-    .then(data => console.log("Server Response:", data));
+    .then(res => res.ok ? res.json() : Promise.reject(res.status))
+    .then(data => {
+      if (data.authenticated && data.roll_no) {
+        setUser({ id: data.roll_no });
+        router.push("/dashboard");
+      }
+    })
+    .catch(() => {/* no session, stay on login page */});
   }, []);
 
   const userlogin = async (e: { preventDefault: () => void }) => {
@@ -44,7 +46,7 @@ const GoogleLogin = () => {
       const uid = await user.uid;
       const fingerprint = await getFingerprint();
 
-      const response = await fetch("http://127.0.0.1:5000/verify/user_id", {
+      const response = await fetch(`${API_BASE}/verify/user_id`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken, uid, fingerprint, user_email }),
@@ -87,7 +89,7 @@ const GoogleLogin = () => {
       const uid = user.uid;
       const fingerprint = await getFingerprint();
 
-      const response = await fetch("http://127.0.0.1:5000/verify/google", {
+      const response = await fetch(`${API_BASE}/verify/google`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ idToken, uid, fingerprint, email }),

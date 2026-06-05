@@ -1,5 +1,6 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from "react";
+import { API_BASE } from "@/lib/api";
 import { useParams } from "next/navigation"; // Add useParams
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,16 +9,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Github, Linkedin } from "lucide-react";
 import { useRouter } from "next/navigation";
-import {
-  PlusCircle,
-  LogOut,
-  Trophy,
-  Mail,
-  Github,
-  Linkedin,
-} from "lucide-react";
+// MUI icons
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutlined";
+import LogoutIcon from "@mui/icons-material/Logout";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import EmailIcon from "@mui/icons-material/Email";
+import PersonIcon from "@mui/icons-material/Person";
+import GroupsIcon from "@mui/icons-material/Groups";
+import WorkspacesIcon from "@mui/icons-material/Workspaces";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlined";
+import StarIcon from "@mui/icons-material/Star";
 import Navbar from "@/components/navbar";
 import { useUserContext } from "@/lib/usercontext";
 
@@ -45,14 +48,10 @@ export default function SettingsPage() {
     role_type: "", // Default value for role_type (empty string for initial state)
     tech_stack: [], // Initialize tech_stack as an empty array
   });
-const {user } = useUserContext()  
+const {user } = useUserContext()
 const userlocal = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
 const parsedUser = userlocal ? JSON.parse(userlocal) : null;
-  const userId = user?.id ? user?.id:parsedUser?.id;
-  console.log("userIds",userId)
-  // const id = user?.id ? user?.id:userlocal?.id;
-
-const id = 'sanjay23bcy51';
+  const userId = user?.id ? user?.id : parsedUser?.id;
   const handleAddTech = () => {
     if (tech.trim() !== "") {
       setTechStack((prev) => [...prev, tech.trim()]);
@@ -97,15 +96,16 @@ const id = 'sanjay23bcy51';
   }
   const [profile, setProfile] = useState<User[]>([]);
   useEffect(() => {
+    if (!profileUserId) return;
     const fetchData = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:5000/profile/view", {
+        const response = await fetch(`${API_BASE}/profile/view`, {
           method: "POST",
-          credentials: "include", // Include cookies if needed
+          credentials: "include",
           headers: {
-            "Content-Type": "application/json", // Specify that we're sending JSON data
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify({roll_no: userId }),
+          body: JSON.stringify({ roll_no: profileUserId }),
         });
 
         if (!response.ok) {
@@ -114,48 +114,43 @@ const id = 'sanjay23bcy51';
 
         const data = await response.json();
         console.log("API Response: line 176", data);
-        setProfile(data.user);
-        setuserData(data.user[0]);
+        setProfile(data.user ?? []);
+        if (data.user?.[0]) setuserData(data.user[0]);
         console.log("Server Response:", data);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
     };
     fetchData();
-  }, []);
+  }, [profileUserId]);
   const [project_setting, setProjectSetting] = useState<Project[]>([]);
   useEffect(() => {
-    let user_id = id;
-    console.log(user_id);
+    if (!profileUserId) return;
     const fetchCurrentProjects = async () => {
       try {
         const response = await fetch(
-          "http://127.0.0.1:5000/list/current/projects",
+          `${API_BASE}/list/current/projects`,
           {
             method: "POST",
-            credentials: "include", // Include cookies if needed
-            headers: {
-              "Content-Type": "application/json", // Specify that we're sending JSON data
-            },
-            body: JSON.stringify({ user_id:userId }),
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: profileUserId }),
           }
         );
 
         if (!response.ok) {
-        console.log("Error:", response.status);
+          console.log("Error:", response.status);
+          return;
         }
 
         const data = await response.json();
-        console.log("Server Response:", data);
-
-        // Update the project_setting state with the fetched projects
-        setProjectSetting(data.project);
+        setProjectSetting(data.project ?? []);
       } catch (error) {
         console.error("Error fetching current projects:", error);
       }
     };
     fetchCurrentProjects();
-  }, []);
+  }, [profileUserId]);
 
   interface Project {
     admin_id: number; // ID of the project administrator
@@ -170,36 +165,32 @@ const id = 'sanjay23bcy51';
   }
   const [past_projects, setPastprojects] = useState<Past[]>([]);
   useEffect(() => {
-    let user_id = id;
+    if (!profileUserId) return;
     const fetchPastProjects = async () => {
       try {
         const response = await fetch(
-          "http://127.0.0.1:5000/list/past/projects",
+          `${API_BASE}/list/past/projects`,
           {
             method: "POST",
-            credentials: "include", // Include cookies if needed
-            headers: {
-              "Content-Type": "application/json", // Specify that we're sending JSON data
-            },
-            body: JSON.stringify({ user_id :userId}),
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: profileUserId }),
           }
         );
 
         if (!response.ok) {
-         console.log("Error:", response.status);
+          console.log("Error:", response.status);
+          return;
         }
 
         const data = await response.json();
-        console.log("Server Response:", data);
-
-        // Update the project_setting state with the fetched projects
-        setPastprojects(data.project);
+        setPastprojects(data.project ?? []);
       } catch (error) {
-        console.error("Error fetching current projects:", error);
+        console.error("Error fetching past projects:", error);
       }
     };
     fetchPastProjects();
-  }, []);
+  }, [profileUserId]);
   interface Past {
     admin_id: number; // ID of the project administrator
     role: string; // Description of the project
@@ -227,7 +218,7 @@ const id = 'sanjay23bcy51';
     try {
       console.log(profileData);
       // Make the API call using your existing API endpoint
-      const response = await fetch("http://127.0.0.1:5000/update/profile", {
+      const response = await fetch(`${API_BASE}/update/profile`, {
         method: "POST",
         credentials: "include", // Include cookies if needed
         headers: {
@@ -249,204 +240,227 @@ const id = 'sanjay23bcy51';
     }
   };
   
+  const initials = userData.name
+    ? userData.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
+    : profileUserId?.slice(0, 2).toUpperCase() ?? "??";
+
+  const skillColors = [
+    "bg-pink-500/15 text-pink-300 border-pink-500/30",
+    "bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/30",
+    "bg-purple-500/15 text-purple-300 border-purple-500/30",
+    "bg-violet-500/15 text-violet-300 border-violet-500/30",
+    "bg-rose-500/15 text-rose-300 border-rose-500/30",
+  ];
+
   return (
-    <div className="flex min-h-screen bg-black text-white">
-          <Navbar  activeNav={activeNav} setActiveNav={setActiveNav}   />
-      <div className="flex-1 p-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Profile & Settings</h1>
-          <Link href="/create_project">
-            <Button className="bg-gradient-to-r from-pink-500 to-purple-500 text-white">
-              <PlusCircle className="mr-2 h-4 w-4" /> Create Project
-            </Button>
-          </Link>
+    <div className="flex min-h-screen bg-[#09090b] text-white">
+      <Navbar activeNav={activeNav} setActiveNav={setActiveNav} />
+
+      <div className="flex-1 overflow-y-auto min-w-0">
+
+        {/* ── Hero banner — avatar anchored to bottom edge ── */}
+        <div className="relative h-28 sm:h-36 border-b border-zinc-800" style={{ background: "linear-gradient(135deg, #831843 0%, #701a75 40%, #4a044e 70%, #18181b 100%)" }}>
+          <div className="absolute inset-0 opacity-30"
+            style={{ backgroundImage: "radial-gradient(circle, #f472b6 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+          <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 30% 50%, rgba(236,72,153,0.25) 0%, transparent 60%)" }} />
+          {/* Avatar: half inside banner, half below */}
+          <div className="absolute bottom-0 left-4 sm:left-8 translate-y-1/2 z-10">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-zinc-900 ring-4 ring-[#09090b] flex items-center justify-center text-lg sm:text-xl font-black text-pink-400 shadow-xl">
+              {initials}
+            </div>
+          </div>
         </div>
 
-        <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-gray-800 mb-6">
-            <TabsTrigger
-              value="profile"
-              className="data-[state=active]:bg-pink-500"
-            >
-              Profile
-            </TabsTrigger>
-            <TabsTrigger
-              value="projects"
-              className="data-[state=active]:bg-pink-500"
-            >
-              Projects
-            </TabsTrigger>
-           {isOwnProfile && (
-              <TabsTrigger
-                value="settings"
-                className="data-[state=active]:bg-pink-500"
-              >
-                Settings
-              </TabsTrigger>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+
+          {/* ── Name row — always on dark bg, clear of banner ── */}
+          <div className="pt-10 sm:pt-12 mb-6 sm:mb-8 flex items-start justify-between gap-3">
+            <div className="pl-20 sm:pl-24 min-w-0">
+              <h1 className="text-lg sm:text-2xl font-bold text-white truncate">{userData.name || profileUserId}</h1>
+              <p className="text-zinc-400 text-xs sm:text-sm truncate">{userData.role_type || "Member"} · {profileUserId}</p>
+            </div>
+
+            {isOwnProfile && (
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Link href="/create_project">
+                  <Button size="sm" className="bg-pink-600 hover:bg-pink-700 text-white">
+                    <AddCircleOutlineIcon style={{ fontSize: 14, marginRight: 4 }} /> New Project
+                  </Button>
+                </Link>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500"
+                  onClick={async () => {
+                    await fetch(`${API_BASE}/logout`, { method: "GET", credentials: "include" });
+                    localStorage.removeItem("user");
+                    localStorage.removeItem("token");
+                    window.location.href = "/";
+                  }}
+                >
+                  <LogoutIcon style={{ fontSize: 14, marginRight: 4 }} /> Logout
+                </Button>
+              </div>
             )}
-          </TabsList>
-   
+          </div>
 
-          {/* Profile Tab */}
-          <TabsContent value="profile" className="space-y-6">
-            {/* Map over the profile.User array */}
-            {profile.map((userData, index) => (
-              <Card key={index} className="bg-gray-800 border-none">
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row gap-8">
-                    {/* Profile Section */}
-                    <div className="flex flex-col items-center">
-                      {/* <div className="relative w-40 h-40 rounded-full overflow-hidden mb-4 border-4 border-pink-500">
-                        <Image
-                          src="/placeholder.svg" // Replace with actual avatar URL if available
-                          alt="User Avatar"
-                          fill
-                          className="object-cover"
-                        />
-                      </div> */}
-                      <h2 className="text-xl font-bold">
-                        {userData.role_type}
-                      </h2>{" "}
-                      {/* Role type as name */}
-                      <p className="text-gray-400">
-                        {userData.past_experience}
-                      </p>{" "}
-                      {/* Past experience */}
-                    </div>
+          {/* ── Stat chips ───────────────────────────────── */}
+          <div className="flex flex-wrap gap-2 sm:gap-3 mb-6 sm:mb-8">
+            {[
+              { label: "Rating",    value: userData.rating?.toFixed?.(1) ?? "—", Icon: StarIcon,                color: "#facc15" },
+              { label: "Active",    value: project_setting?.length ?? 0,          Icon: WorkspacesIcon,          color: "#f472b6" },
+              { label: "Completed", value: past_projects?.length ?? 0,            Icon: CheckCircleOutlineIcon,  color: "#34d399" },
+            ].map(({ label, value, Icon, color }) => (
+              <div key={label} className="flex items-center gap-2.5 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5">
+                <Icon style={{ fontSize: 20, color }} />
+                <div>
+                  <p className="text-base font-bold text-white leading-none">{value}</p>
+                  <p className="text-[11px] text-zinc-500 mt-0.5">{label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
 
-                    {/* Details Section */}
-                    <div className="flex-1 space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Email */}
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-5 w-5 text-pink-500" />
-                          <span>{userData.email}</span>
-                        </div>
+          {/* ── Tabs ─────────────────────────────────────── */}
+          <Tabs defaultValue="profile" className="w-full">
+            <TabsList className="bg-zinc-900 border border-zinc-800 rounded-xl p-1 mb-6 w-fit">
+              <TabsTrigger value="profile" className="rounded-lg data-[state=active]:bg-pink-600 data-[state=active]:text-white text-zinc-400 px-5">
+                Profile
+              </TabsTrigger>
+              <TabsTrigger value="projects" className="rounded-lg data-[state=active]:bg-pink-600 data-[state=active]:text-white text-zinc-400 px-5">
+                Projects
+              </TabsTrigger>
+              {isOwnProfile && (
+                <TabsTrigger value="settings" className="rounded-lg data-[state=active]:bg-pink-600 data-[state=active]:text-white text-zinc-400 px-5">
+                  Settings
+                </TabsTrigger>
+              )}
+            </TabsList>
 
-                        {/*  Profile */}
-                        <div className="flex items-center gap-2">
-                          <Github className="h-5 w-5 text-pink-500" />
-                          <a
-                            href={userData.github_profile}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            GitHub Profile
-                          </a>
-                        </div>
+          {/* ── Profile tab ─────────────────────────────── */}
+          <TabsContent value="profile" className="space-y-5">
+            {(profile ?? []).map((u, index) => (
+              <div key={index} className="grid md:grid-cols-[240px_1fr] gap-5">
 
-                        {/* LinkedIn Profile */}
-                        <div className="flex items-center gap-2">
-                          <Linkedin className="h-5 w-5 text-pink-500" />
-                          <a
-                            href={userData.linkedin_profile}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            {userData.linkedin_profile}
-                          </a>
-                        </div>
-
-                        {/* Rating */}
-                        <div className="flex items-center gap-2">
-                          <Trophy className="h-5 w-5 text-pink-500" />
-                          <span>Rating: {userData.rating}</span>
-                        </div>
+                {/* Left sidebar */}
+                <div className="space-y-4">
+                  {/* Contact card */}
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-3">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Contact</p>
+                    {u.email && (
+                      <div className="flex items-center gap-2.5 text-sm text-zinc-300">
+                        <EmailIcon style={{ fontSize: 16, color: "#f472b6", flexShrink: 0 }} />
+                        <span className="truncate">{u.email}</span>
                       </div>
-
-                      {/* Bio Section */}
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">Bio</h3>
-                        <p className="text-gray-300">
-                          {userData.past_experience || "No bio available."}
-                        </p>
-                      </div>
-
-                      {/* Skills Section */}
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">Skills</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {userData.tech_stack.map((skill, skillIndex) => (
-                            <span
-                              key={skillIndex}
-                              className="px-3 py-1 bg-gray-700 rounded-full text-sm"
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
+                    )}
+                    {u.github_profile && (
+                      <a href={u.github_profile} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2.5 text-sm text-zinc-300 hover:text-pink-300 transition-colors">
+                        <Github className="h-4 w-4 text-pink-400 flex-shrink-0" />
+                        <span className="truncate">GitHub</span>
+                      </a>
+                    )}
+                    {u.linkedin_profile && (
+                      <a href={u.linkedin_profile} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2.5 text-sm text-zinc-300 hover:text-pink-300 transition-colors">
+                        <Linkedin className="h-4 w-4 text-pink-400 flex-shrink-0" />
+                        <span className="truncate">LinkedIn</span>
+                      </a>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+
+                {/* Right main */}
+                <div className="space-y-5">
+                  {/* Bio */}
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-3">About</p>
+                    <p className="text-zinc-300 text-sm leading-relaxed">
+                      {u.past_experience || "No bio yet."}
+                    </p>
+                  </div>
+
+                  {/* Skills */}
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mb-3">Tech Stack</p>
+                    {(u.tech_stack ?? []).length === 0 ? (
+                      <p className="text-zinc-500 text-sm">No skills added yet.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {(u.tech_stack ?? []).map((skill, i) => (
+                          <span key={i}
+                            className={`px-3 py-1 rounded-full text-xs font-medium border ${skillColors[i % skillColors.length]}`}>
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             ))}
           </TabsContent>
-          {/* Projects Tab */}
+
+          {/* ── Projects tab ────────────────────────────── */}
           <TabsContent value="projects" className="space-y-6">
-            <Card className="bg-gray-800 border-none">
-              <CardHeader>
-                <CardTitle className="text-pink-500">
-                  Current Projects
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Map over project_setting to render each project */}
-                  {project_setting.map((project) => (
-                    <div
-                      key={project.project_id}
-                      className="p-4 bg-gray-700 rounded-lg"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold">{project.title}</h3>
-                          <p className="text-sm text-gray-400">
-                            Role: {project.role}
-                          </p>
-                          <p className="text-sm mt-1">
-                            Team: {project.members_required} members
-                          </p>
-                          {/* <p className="text-sm mt-1">Tags: {project.tags}</p> */}
-                        </div>
+
+            {/* Active projects */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <h3 className="text-sm font-semibold uppercase tracking-widest text-zinc-400">Active Projects</h3>
+              </div>
+              {(project_setting ?? []).length === 0 ? (
+                <p className="text-zinc-500 text-sm">No active projects.</p>
+              ) : (
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {(project_setting ?? []).map((project) => (
+                    <div key={project.project_id}
+                      className="bg-zinc-900 border border-zinc-800 hover:border-zinc-600 rounded-2xl p-5 flex flex-col gap-3 transition-colors">
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="font-semibold text-white text-sm leading-snug">{project.title}</h4>
+                        <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wide bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-full px-2.5 py-0.5">
+                          Active
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-zinc-500">
+                        <span className="flex items-center gap-1"><PersonIcon style={{ fontSize: 13 }} /> {project.role || "Member"}</span>
+                        <span className="flex items-center gap-1"><GroupsIcon style={{ fontSize: 13 }} /> {project.members_required} members</span>
                       </div>
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
+              )}
+            </div>
 
-            <Card className="bg-gray-800 border-none">
-              <CardHeader>
-                <CardTitle className="text-pink-500">Past Projects</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {past_projects.map((project) => (
-                    <div
-                      key={project.project_id}
-                      className="p-4 bg-gray-700 rounded-lg"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold">{project.title}</h3>
-                          <p className="text-sm text-gray-400">
-                            Role: {project.role}
-                          </p>
-                          <p className="text-sm mt-1">
-                            Team: {project.members_required} members
-                          </p>
-                        </div>
-                        <div className="px-3 py-1 bg-green-500 rounded-full text-sm">
-                          Completed
-                        </div>
+            {/* Past projects */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="w-2 h-2 rounded-full bg-zinc-500" />
+                <h3 className="text-sm font-semibold uppercase tracking-widest text-zinc-400">Past Projects</h3>
+              </div>
+              {(past_projects ?? []).length === 0 ? (
+                <p className="text-zinc-500 text-sm">No completed projects yet.</p>
+              ) : (
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {(past_projects ?? []).map((project) => (
+                    <div key={project.project_id}
+                      className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex flex-col gap-3 opacity-80">
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="font-semibold text-white text-sm leading-snug">{project.title}</h4>
+                        <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wide bg-zinc-700 text-zinc-400 border border-zinc-600 rounded-full px-2.5 py-0.5">
+                          Done
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-zinc-500">
+                        <span className="flex items-center gap-1"><PersonIcon style={{ fontSize: 13 }} /> {project.role || "Member"}</span>
+                        <span className="flex items-center gap-1"><GroupsIcon style={{ fontSize: 13 }} /> {project.members_required} members</span>
                       </div>
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-
+              )}
+            </div>
           </TabsContent>
           {isOwnProfile && (<TabsContent value="settings" className="space-y-6">
             <Card className="bg-gray-800 border-none">
@@ -555,7 +569,7 @@ const id = 'sanjay23bcy51';
                   </div>
                   {userData.tech_stack.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {userData.tech_stack.map((item, index) => (
+                      {(userData.tech_stack ?? []).map((item, index) => (
                         <Badge
                           key={index}
                           variant="secondary"
@@ -583,26 +597,6 @@ const id = 'sanjay23bcy51';
                 >
                   Save Changes
                 </Button>
-              </CardContent>
-            </Card>
-            {/* Logout Section */}
-            <Card className="bg-gray-800 border-none">
-              <CardContent className="space-y-6">
-                <div className="pt-4 border-t border-gray-700">
-                <Button 
-  onClick={() => {
-    localStorage.removeItem('user');
-   localStorage.removeItem('token');
-    
-    // Redirect to homepage
-    router.push('/');
-  }} 
-  variant="destructive" 
-  className="w-full"
->
-  <LogOut className="mr-2 h-4 w-4" /> Logout
-</Button>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>)}
@@ -679,13 +673,14 @@ const id = 'sanjay23bcy51';
               <CardContent className="space-y-6">
                 <div className="pt-4 border-t border-gray-700">
                   <Button variant="destructive" className="w-full">
-                    <LogOut className="mr-2 h-4 w-4" /> Logout
+                    <LogoutIcon style={{ fontSize: 16, marginRight: 6 }} /> Logout
                   </Button>
                 </div>
               </CardContent>
             </Card>
           </TabsContent> */}
-        </Tabs>
+          </Tabs>
+        </div>
       </div>
     </div>
   );

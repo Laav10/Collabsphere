@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import { Bell, Check, X } from "lucide-react"
@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { formatDistanceToNow } from "date-fns"
 import { useUserContext } from "@/lib/usercontext"
 import Link from "next/link";
+import { API_BASE } from "@/lib/api"
 
 interface Notification {
   application_id: number
@@ -42,7 +43,7 @@ export default function NotificationBell() {
       setError(null)
       
       // For testing: Add a check to see if the server is running
-      const testResponse = await fetch("http://127.0.0.1:5000/ping", {
+      const testResponse = await fetch(`${API_BASE}/ping`, {
         method: "GET",
         credentials: "include",
         headers: {
@@ -53,7 +54,7 @@ export default function NotificationBell() {
         console.log("Server is not reachable")
       })
       
-      const response = await fetch("http://127.0.0.1:5000/notification", {
+      const response = await fetch(`${API_BASE}/notification`, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -126,7 +127,7 @@ export default function NotificationBell() {
   const handleAcceptRequest = async (applicationId: number,project_id:number,applicant_id:string, accept: boolean) => {
     try {
       setLoading(true)
-      const response = await fetch("http://127.0.0.1:5000/update/project/app/status", {
+      const response = await fetch(`${API_BASE}/update/project/app/status`, {
         method: "POST",
         credentials: "include",
         headers: {
